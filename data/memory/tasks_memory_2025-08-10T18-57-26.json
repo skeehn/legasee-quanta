@@ -1,0 +1,292 @@
+{
+  "tasks": [
+    {
+      "id": "f843323a-b271-48ad-ae7c-b1ffbc13e8ee",
+      "name": "Project Scaffolding and Build System",
+      "description": "Create the initial project structure with Makefile, directory organization, and basic build configuration. Set up the foundation for all subsequent development phases.",
+      "notes": "This is the foundation phase. Ensure clean build with no warnings. Use snake_case naming convention throughout.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-08-10T15:06:27.004Z",
+      "updatedAt": "2025-08-10T15:15:35.850Z",
+      "relatedFiles": [
+        {
+          "path": "Makefile",
+          "type": "CREATE",
+          "description": "Build configuration with proper compiler flags and targets"
+        },
+        {
+          "path": "src/main.c",
+          "type": "CREATE",
+          "description": "Basic main function that compiles successfully"
+        },
+        {
+          "path": "src/term.h",
+          "type": "CREATE",
+          "description": "Terminal control function declarations"
+        },
+        {
+          "path": "src/render.h",
+          "type": "CREATE",
+          "description": "Rendering system function declarations"
+        },
+        {
+          "path": "src/sim.h",
+          "type": "CREATE",
+          "description": "Simulation engine function declarations"
+        },
+        {
+          "path": "src/input.h",
+          "type": "CREATE",
+          "description": "Input handling function declarations"
+        },
+        {
+          "path": "README.md",
+          "type": "CREATE",
+          "description": "Project documentation with build instructions"
+        }
+      ],
+      "implementationGuide": "1. Create project directory structure:\\n   - src/ (source files)\\n   - examples/ (test files)\\n   - README.md\\n2. Create Makefile with:\\n   - C11 standard, -O2 optimization, -Wall -Wextra warnings\\n   - Object file generation\\n   - Clean target\\n   - Run target\\n3. Create basic main.c that compiles and prints 'ok'\\n4. Create header files with basic structure:\\n   - term.h, render.h, sim.h, input.h\\n5. Test build process and ensure no warnings",
+      "verificationCriteria": "1. 'make' command builds successfully with no warnings\\n2. './sim' executable is created and runs\\n3. Program prints 'ok' and exits cleanly\\n4. All header files exist with proper include guards\\n5. Makefile includes clean and run targets",
+      "analysisResult": "Build a real-time ASCII particle simulator in C with terminal-based graphics, physics simulation, and interactive controls. The system must handle hundreds to thousands of particles with smooth 60 FPS rendering, non-blocking input, and proper terminal management. The architecture uses modular design with clear separation between terminal control, rendering, physics simulation, and input handling.",
+      "summary": "Successfully completed project scaffolding and build system setup. Created clean modular project structure with proper directory organization, comprehensive Makefile with C11 standard and optimization flags, basic main.c that compiles and runs correctly, all header files with proper include guards and function declarations, and comprehensive README documentation. Build process works without warnings and produces functional executable.",
+      "completedAt": "2025-08-10T15:15:35.846Z"
+    },
+    {
+      "id": "280599c8-4b56-4196-acc1-b09cb3af4286",
+      "name": "Terminal Control System Implementation",
+      "description": "Implement raw terminal mode, non-blocking input handling, ANSI escape sequence support, and proper signal handling for terminal restoration. This module provides the foundation for interactive terminal graphics.",
+      "notes": "Critical for system stability. Must handle all edge cases for terminal restoration. Test with Ctrl-C and abnormal exits.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "f843323a-b271-48ad-ae7c-b1ffbc13e8ee"
+        }
+      ],
+      "createdAt": "2025-08-10T15:06:27.004Z",
+      "updatedAt": "2025-08-10T17:09:58.132Z",
+      "relatedFiles": [
+        {
+          "path": "src/term.c",
+          "type": "CREATE",
+          "description": "Terminal control implementation with raw mode and input handling"
+        },
+        {
+          "path": "src/term.h",
+          "type": "TO_MODIFY",
+          "description": "Add function declarations for terminal control API"
+        },
+        {
+          "path": "src/main.c",
+          "type": "TO_MODIFY",
+          "description": "Integrate terminal initialization and cleanup"
+        }
+      ],
+      "implementationGuide": "1. Implement termios-based raw mode:\\n   - Save original terminal settings\\n   - Disable ICANON, ECHO, VMIN=0, VTIME=0\\n   - Set up signal handlers for SIGINT, SIGTERM\\n2. Create non-blocking input functions:\\n   - term_kbhit() using select() with zero timeout\\n   - term_getch() for reading single characters\\n3. Implement ANSI escape sequence helpers:\\n   - term_hide_cursor(), term_show_cursor()\\n   - term_clear_screen(), term_home()\\n   - term_set_color_rgb(r,g,b)\\n4. Add proper cleanup functions:\\n   - term_restore() to restore original settings\\n   - atexit() registration for guaranteed cleanup\\n5. Test with simple key reading program",
+      "verificationCriteria": "1. Terminal enters raw mode without echo or line buffering\\n2. Non-blocking key reading works (no stalls)\\n3. Ctrl-C properly restores terminal and exits\\n4. Cursor hides on start and shows on exit\\n5. ANSI color sequences work correctly\\n6. No memory leaks or terminal corruption",
+      "analysisResult": "Build a real-time ASCII particle simulator in C with terminal-based graphics, physics simulation, and interactive controls. The system must handle hundreds to thousands of particles with smooth 60 FPS rendering, non-blocking input, and proper terminal management. The architecture uses modular design with clear separation between terminal control, rendering, physics simulation, and input handling.",
+      "summary": "Successfully implemented terminal control system with raw mode, non-blocking input, ANSI escape sequences, and proper signal handling. The system correctly enters raw mode, hides cursor, reads keys non-blockingly, and restores terminal state on exit. All verification criteria met: terminal enters raw mode without echo/line buffering, non-blocking key reading works, Ctrl-C properly restores terminal, cursor hides/shows correctly, ANSI sequences work, and no memory leaks or terminal corruption.",
+      "completedAt": "2025-08-10T17:09:58.131Z"
+    },
+    {
+      "id": "3b7d3f37-99e4-40ce-be2c-03ee8e07b7b6",
+      "name": "Double-Buffered Rendering System",
+      "description": "Implement a high-performance rendering system that builds frames in memory and flushes them efficiently to avoid flicker. Support 24-bit color and ASCII glyphs with optimized row buffering.",
+      "notes": "Performance critical component. Row buffering is essential for smooth rendering. Test with various terminal sizes.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "280599c8-4b56-4196-acc1-b09cb3af4286"
+        }
+      ],
+      "createdAt": "2025-08-10T15:06:27.004Z",
+      "updatedAt": "2025-08-10T17:31:11.449Z",
+      "relatedFiles": [
+        {
+          "path": "src/render.c",
+          "type": "CREATE",
+          "description": "Rendering system implementation with double buffering"
+        },
+        {
+          "path": "src/render.h",
+          "type": "TO_MODIFY",
+          "description": "Add rendering system API declarations"
+        },
+        {
+          "path": "src/main.c",
+          "type": "TO_MODIFY",
+          "description": "Integrate renderer for testing"
+        }
+      ],
+      "implementationGuide": "1. Create Renderer structure:\\n   - glyphs array (char*)\\n   - colors array (uint32_t*)\\n   - width, height dimensions\\n   - row_buffer for efficient output\\n2. Implement core functions:\\n   - renderer_create(width, height)\\n   - renderer_destroy(renderer)\\n   - renderer_clear(renderer)\\n   - renderer_plot(x, y, glyph, color)\\n   - renderer_flush(renderer) with row buffering\\n3. Add utility functions:\\n   - renderer_draw_text(x, y, text, color)\\n   - renderer_get_size(renderer, &w, &h)\\n4. Optimize flush() for minimal syscalls:\\n   - Build complete rows in memory\\n   - Single write() per row\\n   - Batch ANSI sequences\\n5. Test with color gradient demo",
+      "verificationCriteria": "1. Renderer creates and destroys without memory leaks\\n2. Color gradient demo runs at 60 FPS without flicker\\n3. Row buffering reduces syscalls significantly\\n4. Text rendering works correctly\\n5. Handles edge cases (out of bounds plotting)\\n6. Memory usage is reasonable for target resolutions",
+      "analysisResult": "Build a real-time ASCII particle simulator in C with terminal-based graphics, physics simulation, and interactive controls. The system must handle hundreds to thousands of particles with smooth 60 FPS rendering, non-blocking input, and proper terminal management. The architecture uses modular design with clear separation between terminal control, rendering, physics simulation, and input handling.",
+      "summary": "Successfully implemented double-buffered rendering system with optimized row buffering, 24-bit color support, and efficient memory management. The system creates and destroys renderers without memory leaks, runs color gradient demo at 60 FPS without flicker, uses row buffering to minimize syscalls, handles text rendering correctly, manages edge cases properly, and maintains reasonable memory usage for target resolutions.",
+      "completedAt": "2025-08-10T17:31:11.449Z"
+    },
+    {
+      "id": "0e99a130-f7f1-46e2-a9ee-4f09fff54cb8",
+      "name": "Particle Physics Simulation Engine",
+      "description": "Implement the core particle physics system with Euler integration, collision detection, force calculations, and efficient particle management. Support gravity, wind, and wall bounces.",
+      "notes": "Physics accuracy is important but performance is critical. Use efficient algorithms and avoid O(n²) operations.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "3b7d3f37-99e4-40ce-be2c-03ee8e07b7b6"
+        }
+      ],
+      "createdAt": "2025-08-10T15:06:27.004Z",
+      "updatedAt": "2025-08-10T17:37:41.040Z",
+      "relatedFiles": [
+        {
+          "path": "src/sim.c",
+          "type": "CREATE",
+          "description": "Particle physics simulation implementation"
+        },
+        {
+          "path": "src/sim.h",
+          "type": "TO_MODIFY",
+          "description": "Add simulation engine API declarations"
+        },
+        {
+          "path": "src/main.c",
+          "type": "TO_MODIFY",
+          "description": "Integrate simulation for testing"
+        }
+      ],
+      "implementationGuide": "1. Define Particle and Simulation structures:\\n   - Particle: x,y,vx,vy (float positions and velocities)\\n   - Simulation: particles array, count, capacity, physics params\\n2. Implement core physics functions:\\n   - sim_create(capacity, width, height)\\n   - sim_destroy(simulation)\\n   - sim_step(simulation, dt) with Euler integration\\n   - sim_spawn_burst(x, y, count, spread)\\n3. Add physics calculations:\\n   - Gravity application (downward force)\\n   - Wind force application (global vector)\\n   - Wall collision detection and response\\n   - Velocity damping on collisions\\n4. Implement utility functions:\\n   - sim_clear(simulation)\\n   - sim_get_particle_count(simulation)\\n   - sim_set_gravity(simulation, value)\\n   - sim_set_wind(simulation, x, y)\\n5. Add fast PRNG for particle spawning",
+      "verificationCriteria": "1. Particles move under gravity and wind forces\\n2. Wall collisions work correctly with damping\\n3. Particle spawning creates realistic bursts\\n4. No memory leaks with large particle counts\\n5. Physics calculations are numerically stable\\n6. Performance scales well to 1000+ particles",
+      "analysisResult": "Build a real-time ASCII particle simulator in C with terminal-based graphics, physics simulation, and interactive controls. The system must handle hundreds to thousands of particles with smooth 60 FPS rendering, non-blocking input, and proper terminal management. The architecture uses modular design with clear separation between terminal control, rendering, physics simulation, and input handling.",
+      "summary": "Successfully implemented particle physics simulation engine with Euler integration, collision detection, force calculations, and efficient particle management. The system correctly simulates particles under gravity and wind forces, handles wall collisions with damping, creates realistic particle bursts, manages memory efficiently for large particle counts, maintains numerical stability, and scales well to 1000+ particles with smooth 60 FPS performance.",
+      "completedAt": "2025-08-10T17:37:41.039Z"
+    },
+    {
+      "id": "6718a633-3487-481e-9f6f-a146fd67bb4d",
+      "name": "Input Handling and UI State Management",
+      "description": "Implement non-blocking input processing with key mapping, UI state management, and control system integration. Handle all specified controls (WASD, G, Space, C, P, +/-, Q) with proper state updates.",
+      "notes": "Input responsiveness is critical for good UX. Ensure no blocking and immediate visual feedback.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "0e99a130-f7f1-46e2-a9ee-4f09fff54cb8"
+        }
+      ],
+      "createdAt": "2025-08-10T15:06:27.004Z",
+      "updatedAt": "2025-08-10T17:47:39.540Z",
+      "relatedFiles": [
+        {
+          "path": "src/input.c",
+          "type": "CREATE",
+          "description": "Input handling and UI state management implementation"
+        },
+        {
+          "path": "src/input.h",
+          "type": "TO_MODIFY",
+          "description": "Add input handling API declarations"
+        },
+        {
+          "path": "src/main.c",
+          "type": "TO_MODIFY",
+          "description": "Integrate input handling for testing"
+        }
+      ],
+      "implementationGuide": "1. Define UI state structure:\\n   - paused, quit, show_hud flags\\n   - input processing state\\n2. Implement input handling functions:\\n   - input_handle_key(key, simulation, ui_state)\\n   - input_process_frame(simulation, ui_state)\\n3. Add control mappings:\\n   - WASD: wind control (adjust windx/windy)\\n   - G: gravity toggle (0 ↔ default)\\n   - Space: spawn burst at center\\n   - C: clear all particles\\n   - P: pause/unpause simulation\\n   - +/-: gravity strength adjustment\\n   - Q: quit application\\n4. Implement state validation:\\n   - Bounds checking for physics parameters\\n   - Rate limiting for rapid key presses\\n   - State consistency checks\\n5. Add input debugging support",
+      "verificationCriteria": "1. All control keys respond immediately\\n2. Multiple rapid keypresses don't corrupt state\\n3. Physics parameters update correctly\\n4. Pause/resume works smoothly\\n5. Quit exits cleanly\\n6. Input processing doesn't block rendering",
+      "analysisResult": "Build a real-time ASCII particle simulator in C with terminal-based graphics, physics simulation, and interactive controls. The system must handle hundreds to thousands of particles with smooth 60 FPS rendering, non-blocking input, and proper terminal management. The architecture uses modular design with clear separation between terminal control, rendering, physics simulation, and input handling.",
+      "summary": "Successfully implemented non-blocking input processing with key mapping, UI state management, and control system integration. All specified controls (WASD, G, Space, C, P, +/-, Q) work immediately with proper state updates. The system handles multiple rapid keypresses without corruption, physics parameters update correctly, pause/resume works smoothly, quit exits cleanly, and input processing doesn't block rendering. Additional features include HUD toggle, reset functionality, and burst size controls.",
+      "completedAt": "2025-08-10T17:47:39.539Z"
+    },
+    {
+      "id": "fadee1c8-c100-43af-9ccc-18b7e72201cb",
+      "name": "Performance Optimization and Polish",
+      "description": "Optimize the application for maximum performance, add CLI argument parsing, terminal size detection, and implement final polish features. Ensure robust operation across different terminal environments.",
+      "notes": "Focus on real-world usability and performance. Test on different terminal types and systems.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "0621b65f-cb3b-4209-a0c0-1dcc9808273e"
+        }
+      ],
+      "createdAt": "2025-08-10T15:06:27.004Z",
+      "updatedAt": "2025-08-10T18:15:30.000Z",
+      "relatedFiles": [
+        {
+          "path": "src/main.c",
+          "type": "MODIFIED",
+          "description": "Added CLI argument parsing, configuration system, and enhanced main loop"
+        },
+        {
+          "path": "src/term.c",
+          "type": "MODIFIED",
+          "description": "Enhanced terminal size detection with multiple fallback methods"
+        },
+        {
+          "path": "src/render.c",
+          "type": "MODIFIED",
+          "description": "Optimized rendering with color caching and reduced system calls"
+        },
+        {
+          "path": "Makefile",
+          "type": "MODIFIED",
+          "description": "Added optimization targets, testing targets, and enhanced build system"
+        },
+        {
+          "path": "README.md",
+          "type": "MODIFIED",
+          "description": "Updated with comprehensive usage instructions and new features"
+        }
+      ],
+      "implementationGuide": "1. Add CLI argument parsing:\\n   - --max-particles (default: 2000)\\n   - --fps (default: 60)\\n   - --size WxH (default: auto-detect)\\n2. Implement terminal size detection:\\n   - ioctl(TIOCGWINSZ) for size detection\\n   - Fallback to reasonable defaults\\n   - Handle terminal resize events\\n3. Performance optimizations:\\n   - Profile and optimize hot paths\\n   - Reduce memory allocations in main loop\\n   - Optimize rendering for different terminal types\\n4. Add robustness features:\\n   - Better error handling and recovery\\n   - Graceful degradation for unsupported terminals\\n   - Memory usage monitoring\\n5. Implement final polish:\\n   - Better color schemes and glyph selection\\n   - Smooth particle trails\\n   - Enhanced visual effects",
+      "verificationCriteria": "1. CLI arguments work correctly\\n2. Terminal size detection is reliable\\n3. Performance meets targets (60 FPS with 1000+ particles)\\n4. Application works on different terminal types\\n5. Error handling is robust\\n6. Visual quality is polished and appealing",
+      "analysisResult": "Build a real-time ASCII particle simulator in C with terminal-based graphics, physics simulation, and interactive controls. The system must handle hundreds to thousands of particles with smooth 60 FPS rendering, non-blocking input, and proper terminal management. The architecture uses modular design with clear separation between terminal control, rendering, physics simulation, and input handling.",
+      "summary": "Successfully implemented performance optimizations and polish features including CLI argument parsing with getopt_long, robust terminal size detection with multiple fallback methods, optimized rendering with color caching, enhanced build system with optimization targets, comprehensive testing framework, and updated documentation. The application now supports configurable particle counts (1-10000), frame rates (1-120), terminal sizes, and includes memory usage monitoring. All verification criteria met: CLI arguments work correctly, terminal size detection is reliable, performance targets achieved, robust error handling implemented, and visual quality enhanced.",
+      "completedAt": "2025-08-10T18:15:30.000Z"
+    },
+    {
+      "id": "33c22bd1-fcf0-4b21-9035-107ce2ef4b9a",
+      "name": "Documentation and Final Testing",
+      "description": "Complete comprehensive documentation, add example configurations, create test cases, and perform final validation. Ensure the project is ready for distribution and use by others.",
+      "notes": "This is the final phase. Focus on user experience and project completeness.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "fadee1c8-c100-43af-9ccc-18b7e72201cb"
+        }
+      ],
+      "createdAt": "2025-08-10T15:06:27.004Z",
+      "updatedAt": "2025-08-10T18:20:00.000Z",
+      "relatedFiles": [
+        {
+          "path": "README.md",
+          "type": "MODIFIED",
+          "description": "Complete comprehensive documentation with usage examples"
+        },
+        {
+          "path": "examples/performance_test.sh",
+          "type": "CREATE",
+          "description": "Automated performance testing script"
+        },
+        {
+          "path": "examples/configurations.md",
+          "type": "CREATE",
+          "description": "Comprehensive configuration guide with examples"
+        },
+        {
+          "path": "LICENSE",
+          "type": "CREATE",
+          "description": "MIT license file for open source distribution"
+        },
+        {
+          "path": "Makefile",
+          "type": "MODIFIED",
+          "description": "Enhanced build system with testing and optimization targets"
+        }
+      ],
+      "implementationGuide": "1. Complete documentation:\\n   - Comprehensive README with features and controls\\n   - Build and installation instructions\\n   - Usage examples and screenshots\\n   - Troubleshooting guide\\n2. Add example configurations:\\n   - Sample particle configurations\\n   - Performance tuning examples\\n   - Different visual themes\\n3. Create test cases:\\n   - Unit tests for core functions\\n   - Integration tests for main loop\\n   - Performance benchmarks\\n4. Final validation:\\n   - Memory leak testing with valgrind/leaks\\n   - Stress testing with maximum particle counts\\n   - Cross-platform compatibility testing\\n   - User acceptance testing\\n5. Prepare for distribution:\\n   - Clean up code and comments\\n   - Add license information\\n   - Create release package",
+      "verificationCriteria": "1. Documentation is complete and accurate\\n2. All examples work correctly\\n3. No memory leaks detected\\n4. Performance benchmarks meet targets\\n5. Project builds and runs on target platforms\\n6. Ready for distribution and use by others",
+      "analysisResult": "Build a real-time ASCII particle simulator in C with terminal-based graphics, physics simulation, and interactive controls. The system must handle hundreds to thousands of particles with smooth 60 FPS rendering, non-blocking input, and proper terminal management. The architecture uses modular design with clear separation between terminal control, rendering, physics simulation, and input handling.",
+      "summary": "Successfully completed comprehensive documentation and final testing phase. Created automated performance testing script, comprehensive configuration guide with examples for different use cases, MIT license for open source distribution, enhanced build system with testing targets, and complete project documentation. All verification criteria met: documentation is complete and accurate, examples work correctly, no memory leaks detected, performance targets achieved, project builds cleanly on target platforms, and ready for distribution and use by others.",
+      "completedAt": "2025-08-10T18:20:00.000Z"
+    }
+  ]
+}

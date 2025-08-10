@@ -1,0 +1,214 @@
+{
+  "tasks": [
+    {
+      "id": "7ede5d33-baa6-46ca-83aa-762ed69f6229",
+      "name": "Implement Comprehensive Edge Case Testing",
+      "description": "Create extensive edge case tests for SIMD functions including boundary conditions, extreme values, malformed data, and error scenarios to ensure robustness and reliability of the NEON implementation.",
+      "notes": "Focus on finding edge cases that could cause crashes or incorrect behavior in production environments. Ensure all tests can run automatically and provide clear pass/fail results.",
+      "status": "in_progress",
+      "dependencies": [],
+      "createdAt": "2025-08-10T19:55:47.728Z",
+      "updatedAt": "2025-08-10T20:05:25.364Z",
+      "relatedFiles": [
+        {
+          "path": "examples/simd_test.c",
+          "type": "TO_MODIFY",
+          "description": "Add edge case tests to existing test suite",
+          "lineStart": 1,
+          "lineEnd": 50
+        },
+        {
+          "path": "src/simd.c",
+          "type": "REFERENCE",
+          "description": "Reference for SIMD function signatures and behavior",
+          "lineStart": 335,
+          "lineEnd": 564
+        },
+        {
+          "path": "src/simd.h",
+          "type": "REFERENCE",
+          "description": "Reference for SIMD API definitions",
+          "lineStart": 1,
+          "lineEnd": 100
+        }
+      ],
+      "implementationGuide": "1. Create edge case test suite:\\n   - Test with particle counts of 0, 1, 3, 7 (non-multiple of 4)\\n   - Test with extreme physics values (very large/small dt, gravity, wind)\\n   - Test with NaN and infinity values in particle data\\n   - Test with unaligned memory addresses\\n   - Test with NULL pointers and invalid parameters\\n2. Implement stress testing:\\n   - Test with maximum particle counts (100K+ particles)\\n   - Test with rapid state changes and high update frequencies\\n   - Test memory allocation failures and recovery\\n3. Add validation tests:\\n   - Verify SIMD results match scalar results exactly\\n   - Test numerical precision and floating-point consistency\\n   - Validate memory alignment requirements\\n4. Create automated test runner:\\n   - Integrate edge case tests into existing test framework\\n   - Add performance regression detection\\n   - Implement test result reporting and failure analysis",
+      "verificationCriteria": "1. All edge case tests pass without crashes or undefined behavior\\n2. SIMD results exactly match scalar results for all test cases\\n3. Memory alignment and allocation failures are handled gracefully\\n4. Test suite runs automatically and provides clear pass/fail reporting\\n5. Performance regression detection identifies significant performance changes",
+      "analysisResult": "Complete the NEON SIMD particle physics implementation to production-ready status by addressing testing gaps, documentation, cross-platform compatibility, and performance optimization opportunities while maintaining the existing architectural patterns and code quality standards."
+    },
+    {
+      "id": "ad4edcf4-e74f-4633-a572-f1f863688936",
+      "name": "Implement SSE/AVX Support for x86 Platforms",
+      "description": "Add actual SSE and AVX implementations for x86 platforms to provide cross-platform SIMD support, replacing placeholder functions with optimized vectorized particle physics calculations.",
+      "notes": "Use compiler intrinsics rather than inline assembly for better portability and optimization. Ensure all x86 implementations follow the same interface as NEON implementations.",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "7ede5d33-baa6-46ca-83aa-762ed69f6229"
+        }
+      ],
+      "createdAt": "2025-08-10T19:55:47.729Z",
+      "updatedAt": "2025-08-10T19:55:47.729Z",
+      "relatedFiles": [
+        {
+          "path": "src/simd.c",
+          "type": "TO_MODIFY",
+          "description": "Replace placeholder SSE/AVX functions with actual implementations",
+          "lineStart": 351,
+          "lineEnd": 362
+        },
+        {
+          "path": "src/simd.h",
+          "type": "TO_MODIFY",
+          "description": "Add x86-specific SIMD feature flags and function declarations",
+          "lineStart": 1,
+          "lineEnd": 50
+        },
+        {
+          "path": "Makefile",
+          "type": "TO_MODIFY",
+          "description": "Add x86-specific build targets and compiler flags",
+          "lineStart": 70,
+          "lineEnd": 85
+        }
+      ],
+      "implementationGuide": "1. Implement SSE particle step function:\\n   - Use SSE intrinsics (_mm_load_ps, _mm_add_ps, _mm_mul_ps)\\n   - Process 4 particles simultaneously (4x float32 vectors)\\n   - Handle alignment requirements and boundary conditions\\n   - Ensure numerical precision matches scalar implementation\\n2. Implement AVX particle step function:\\n   - Use AVX intrinsics (_mm256_load_ps, _mm256_add_ps, _mm256_mul_ps)\\n   - Process 8 particles simultaneously (8x float32 vectors)\\n   - Add AVX2 optimizations for better performance\\n   - Include FMA (Fused Multiply-Add) optimizations\\n3. Update function selection logic:\\n   - Prioritize AVX2 > AVX > SSE > Scalar based on availability\\n   - Add runtime capability detection for x86 platforms\\n   - Ensure proper fallback chain for unsupported features\\n4. Add x86-specific tests:\\n   - Test SSE and AVX implementations on x86 platforms\\n   - Verify cross-platform compatibility and performance\\n   - Add x86 build targets to Makefile",
+      "verificationCriteria": "1. SSE implementation processes 4 particles simultaneously with correct results\\n2. AVX implementation processes 8 particles simultaneously with correct results\\n3. Function selection correctly chooses best available SIMD implementation\\n4. Performance improvements are measurable on x86 platforms\\n5. All existing tests pass with x86 implementations",
+      "analysisResult": "Complete the NEON SIMD particle physics implementation to production-ready status by addressing testing gaps, documentation, cross-platform compatibility, and performance optimization opportunities while maintaining the existing architectural patterns and code quality standards."
+    },
+    {
+      "id": "06a1e7bc-b2a2-4eaa-b957-e2b09396eb4a",
+      "name": "Create Comprehensive Documentation",
+      "description": "Develop complete documentation for the SIMD implementation including API reference, performance tuning guide, troubleshooting guide, and usage examples to support production deployment and maintenance.",
+      "notes": "Focus on practical documentation that helps developers use and maintain the SIMD code. Include real-world examples and performance data from actual testing.",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "ad4edcf4-e74f-4633-a572-f1f863688936"
+        }
+      ],
+      "createdAt": "2025-08-10T19:55:47.729Z",
+      "updatedAt": "2025-08-10T19:55:47.729Z",
+      "relatedFiles": [
+        {
+          "path": "docs/SIMD_API.md",
+          "type": "CREATE",
+          "description": "Create comprehensive API documentation",
+          "lineStart": 1,
+          "lineEnd": 100
+        },
+        {
+          "path": "docs/PERFORMANCE_GUIDE.md",
+          "type": "CREATE",
+          "description": "Create performance tuning guide",
+          "lineStart": 1,
+          "lineEnd": 100
+        },
+        {
+          "path": "docs/TROUBLESHOOTING.md",
+          "type": "CREATE",
+          "description": "Create troubleshooting guide",
+          "lineStart": 1,
+          "lineEnd": 100
+        },
+        {
+          "path": "src/simd.c",
+          "type": "TO_MODIFY",
+          "description": "Add comprehensive inline documentation",
+          "lineStart": 1,
+          "lineEnd": 564
+        }
+      ],
+      "implementationGuide": "1. Create API documentation:\\n   - Document all SIMD functions with parameters, return values, and usage\\n   - Add code examples for common use cases\\n   - Document platform-specific behavior and limitations\\n   - Include performance characteristics and optimization tips\\n2. Write performance tuning guide:\\n   - Explain SIMD optimization techniques and best practices\\n   - Provide configuration examples for different performance targets\\n   - Document memory alignment requirements and cache optimization\\n   - Include benchmarking methodology and performance metrics\\n3. Create troubleshooting guide:\\n   - Common SIMD issues and solutions\\n   - Platform compatibility problems and workarounds\\n   - Performance debugging and profiling techniques\\n   - Error handling and recovery procedures\\n4. Add inline code documentation:\\n   - Comprehensive comments for NEON intrinsics usage\\n   - Explain optimization techniques and design decisions\\n   - Document platform-specific code sections\\n   - Add usage examples in code comments",
+      "verificationCriteria": "1. All SIMD functions have complete API documentation with examples\\n2. Performance tuning guide provides actionable optimization advice\\n3. Troubleshooting guide covers common issues and solutions\\n4. Inline code documentation explains complex SIMD operations\\n5. Documentation is clear, accurate, and helpful for developers",
+      "analysisResult": "Complete the NEON SIMD particle physics implementation to production-ready status by addressing testing gaps, documentation, cross-platform compatibility, and performance optimization opportunities while maintaining the existing architectural patterns and code quality standards."
+    },
+    {
+      "id": "4b7b6c75-70d9-42ee-ad80-98d941b0b67a",
+      "name": "Implement Automated Performance Regression Testing",
+      "description": "Create automated performance testing framework that detects performance regressions, tracks performance metrics over time, and provides alerts when performance degrades beyond acceptable thresholds.",
+      "notes": "Focus on detecting both significant performance improvements and regressions. Use statistical methods to account for normal performance variations.",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "06a1e7bc-b2a2-4eaa-b957-e2b09396eb4a"
+        }
+      ],
+      "createdAt": "2025-08-10T19:55:47.729Z",
+      "updatedAt": "2025-08-10T19:55:47.729Z",
+      "relatedFiles": [
+        {
+          "path": "tools/performance_benchmark.py",
+          "type": "CREATE",
+          "description": "Create automated performance benchmarking tool",
+          "lineStart": 1,
+          "lineEnd": 100
+        },
+        {
+          "path": "tools/regression_detector.py",
+          "type": "CREATE",
+          "description": "Create performance regression detection tool",
+          "lineStart": 1,
+          "lineEnd": 100
+        },
+        {
+          "path": "examples/performance_test.sh",
+          "type": "TO_MODIFY",
+          "description": "Enhance existing performance test with regression detection",
+          "lineStart": 1,
+          "lineEnd": 31
+        },
+        {
+          "path": "Makefile",
+          "type": "TO_MODIFY",
+          "description": "Add performance testing targets",
+          "lineStart": 80,
+          "lineEnd": 100
+        }
+      ],
+      "implementationGuide": "1. Create performance benchmark suite:\\n   - Automated benchmarks for different particle counts and configurations\\n   - Performance metrics collection (throughput, latency, memory usage)\\n   - Baseline performance data collection and storage\\n   - Statistical analysis of performance variations\\n2. Implement regression detection:\\n   - Compare current performance against historical baselines\\n   - Set acceptable performance thresholds and alerting\\n   - Track performance trends over time\\n   - Generate performance reports and visualizations\\n3. Add CI/CD integration:\\n   - Automated performance testing in build pipeline\\n   - Performance regression blocking for critical regressions\\n   - Performance data storage and historical tracking\\n   - Integration with existing test framework\\n4. Create performance monitoring tools:\\n   - Real-time performance monitoring during development\\n   - Performance profiling and bottleneck identification\\n   - Memory usage tracking and optimization suggestions\\n   - CPU utilization and SIMD efficiency measurement",
+      "verificationCriteria": "1. Automated benchmarks run consistently and produce reliable results\\n2. Performance regression detection identifies significant changes accurately\\n3. Performance data is stored and tracked over time\\n4. CI/CD integration prevents performance regressions in critical code\\n5. Performance monitoring tools provide actionable insights",
+      "analysisResult": "Complete the NEON SIMD particle physics implementation to production-ready status by addressing testing gaps, documentation, cross-platform compatibility, and performance optimization opportunities while maintaining the existing architectural patterns and code quality standards."
+    },
+    {
+      "id": "5ec055b6-10ef-47e2-82d4-b0e6eece226e",
+      "name": "Enhance Error Handling and Robustness",
+      "description": "Improve error handling throughout the SIMD implementation to provide better error reporting, graceful degradation, and recovery mechanisms for production environments.",
+      "notes": "Focus on making the SIMD implementation robust and reliable in production environments. Ensure errors are handled gracefully without crashing the application.",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "4b7b6c75-70d9-42ee-ad80-98d941b0b67a"
+        }
+      ],
+      "createdAt": "2025-08-10T19:55:47.729Z",
+      "updatedAt": "2025-08-10T19:55:47.729Z",
+      "relatedFiles": [
+        {
+          "path": "src/simd.c",
+          "type": "TO_MODIFY",
+          "description": "Add comprehensive error handling and validation",
+          "lineStart": 186,
+          "lineEnd": 320
+        },
+        {
+          "path": "src/simd.h",
+          "type": "TO_MODIFY",
+          "description": "Add error handling function declarations",
+          "lineStart": 50,
+          "lineEnd": 100
+        },
+        {
+          "path": "tools/simd_diagnostics.c",
+          "type": "CREATE",
+          "description": "Create SIMD diagnostic and troubleshooting tools",
+          "lineStart": 1,
+          "lineEnd": 100
+        }
+      ],
+      "implementationGuide": "1. Enhance memory allocation error handling:\\n   - Detailed error reporting for allocation failures\\n   - Graceful fallback to scalar implementation\\n   - Memory usage monitoring and optimization suggestions\\n   - Recovery mechanisms for temporary allocation failures\\n2. Add input validation and sanitization:\\n   - Validate all SIMD function parameters\\n   - Check for NaN, infinity, and other invalid values\\n   - Ensure proper memory alignment requirements\\n   - Add bounds checking for particle arrays\\n3. Implement platform-specific error handling:\\n   - Detect and handle unsupported SIMD features\\n   - Platform-specific error messages and diagnostics\\n   - Fallback strategies for different failure modes\\n   - Runtime capability validation and reporting\\n4. Add logging and diagnostics:\\n   - SIMD operation logging for debugging\\n   - Performance metrics and statistics collection\\n   - Error condition reporting and analysis\\n   - Diagnostic tools for troubleshooting SIMD issues",
+      "verificationCriteria": "1. All error conditions are handled gracefully without crashes\\n2. Error messages are clear and actionable for developers\\n3. Fallback mechanisms work correctly when SIMD is unavailable\\n4. Input validation prevents invalid data from causing issues\\n5. Diagnostic tools help identify and resolve SIMD problems",
+      "analysisResult": "Complete the NEON SIMD particle physics implementation to production-ready status by addressing testing gaps, documentation, cross-platform compatibility, and performance optimization opportunities while maintaining the existing architectural patterns and code quality standards."
+    }
+  ]
+}
