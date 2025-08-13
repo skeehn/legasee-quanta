@@ -75,6 +75,7 @@ void sim_clear(Simulation *sim) {
             pool_free_particle(sim->pool, particle);
         }
         sim->count = 0;
+        pool_iterator_destroy(&iter);
     }
 }
 
@@ -201,6 +202,9 @@ void sim_step(Simulation *sim, float dt) {
         active_count++;
     }
     
+    /* Clean up iterator */
+    pool_iterator_destroy(&iter);
+    
     if (active_count == 0) return;
     
     /* Allocate aligned buffer for SIMD processing */
@@ -219,6 +223,9 @@ void sim_step(Simulation *sim, float dt) {
         simd_buffer[i] = *p;
         i++;
     }
+    
+    /* Clean up iterator */
+    pool_iterator_destroy(&iter);
     
     /* Apply SIMD physics calculations */
     simd_func(simd_buffer, active_count, dt, sim->gravity, sim->windx, sim->windy);
@@ -263,6 +270,9 @@ void sim_step(Simulation *sim, float dt) {
         
         i++;
     }
+    
+    /* Clean up iterator */
+    pool_iterator_destroy(&iter);
     
     /* Free SIMD buffer */
     simd_aligned_free(simd_buffer);
@@ -316,6 +326,9 @@ void sim_step_scalar(Simulation *sim, float dt) {
             sim->count--;
         }
     }
+    
+    /* Clean up iterator */
+    pool_iterator_destroy(&iter);
 }
 
 /* Get particle at index (for rendering) */
@@ -331,10 +344,14 @@ const Particle *sim_get_particle(const Simulation *sim, int index) {
     
     while ((p = pool_iterator_next(&iter)) != NULL) {
         if (current_index == index) {
+            pool_iterator_destroy(&iter);
             return p;
         }
         current_index++;
     }
+    
+    /* Clean up iterator */
+    pool_iterator_destroy(&iter);
     
     return NULL; /* Index out of bounds */
 }

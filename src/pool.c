@@ -167,36 +167,46 @@ PoolIterator pool_iterator_create(ParticlePool *pool) {
         iter.pool = pool;
         iter.current_index = 0;
         iter.active_count = 0;
+        
+        /* Precompute active indices for O(1) iteration */
+        iter.active_indices = malloc(pool->total_capacity * sizeof(int));
+        if (iter.active_indices) {
+            int active_idx = 0;
+            /* Mark all indices as potentially active */
+            char *is_free = calloc(pool->total_capacity, sizeof(char));
+            if (is_free) {
+                /* Mark free indices */
+                for (int i = 0; i < pool->free_count; i++) {
+                    is_free[pool->free_indices[i]] = 1;
+                }
+                
+                /* Collect active indices */
+                for (int i = 0; i < pool->total_capacity; i++) {
+                    if (!is_free[i]) {
+                        iter.active_indices[active_idx++] = i;
+                    }
+                }
+                
+                iter.total_active = active_idx;
+                free(is_free);
+            }
+        }
     }
     return iter;
 }
 
 /* Get next active particle from iterator */
 Particle *pool_iterator_next(PoolIterator *iter) {
-    if (!iter || !iter->pool) {
+    if (!iter || !iter->pool || !iter->active_indices) {
         return NULL;
     }
     
-    ParticlePool *pool = iter->pool;
-    
-    /* Find next active particle */
-    while (iter->current_index < pool->total_capacity) {
-        Particle *particle = &pool->pool[iter->current_index];
+    /* Return particle at current active index */
+    if (iter->current_index < iter->total_active) {
+        int particle_index = iter->active_indices[iter->current_index];
         iter->current_index++;
-        
-        /* Check if this particle is active (not in free list) */
-        int is_free = 0;
-        for (int i = 0; i < pool->free_count; i++) {
-            if (pool->free_indices[i] == iter->current_index - 1) {
-                is_free = 1;
-                break;
-            }
-        }
-        
-        if (!is_free) {
-            iter->active_count++;
-            return particle;
-        }
+        iter->active_count++;
+        return &iter->pool->pool[particle_index];
     }
     
     return NULL; /* No more active particles */
@@ -204,11 +214,11 @@ Particle *pool_iterator_next(PoolIterator *iter) {
 
 /* Check if iterator has more particles */
 int pool_iterator_has_next(const PoolIterator *iter) {
-    if (!iter || !iter->pool) {
+    if (!iter || !iter->pool || !iter->active_indices) {
         return 0;
     }
     
-    return iter->active_count < iter->pool->active_count;
+    return iter->current_index < iter->total_active;
 }
 
 /* Reset iterator to beginning */
@@ -216,6 +226,20 @@ void pool_iterator_reset(PoolIterator *iter) {
     if (iter) {
         iter->current_index = 0;
         iter->active_count = 0;
+    }
+}
+
+/* Destroy iterator and free resources */
+void pool_iterator_destroy(PoolIterator *iter) {
+    if (iter) {
+        if (iter->active_indices) {
+            free(iter->active_indices);
+            iter->active_indices = NULL;
+        }
+        iter->pool = NULL;
+        iter->current_index = 0;
+        iter->active_count = 0;
+        iter->total_active = 0;
     }
 }
 

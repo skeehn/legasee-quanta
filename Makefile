@@ -65,7 +65,7 @@ profile-run: profile
 
 # Object pool testing
 test-pool: $(TARGET)
-	$(CC) $(CFLAGS) -o pool_test examples/pool_test.c src/pool.c src/sim.c -lm -pthread
+	$(CC) $(CFLAGS) -o pool_test examples/pool_test_simple.c src/pool.c -lm -pthread
 	./pool_test
 
 # SIMD testing - platform agnostic

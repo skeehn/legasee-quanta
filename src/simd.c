@@ -456,6 +456,61 @@ void simd_step_neon_optimized(void *particles, int count, float dt, float gravit
     int i = 0;
     int vectorized_count = count & ~3; /* Round down to nearest multiple of 4 */
     
+    /* Create vector constants outside the loop for better performance */
+    const float32x4_t windx_dt_vec = vdupq_n_f32(windx_dt);
+    const float32x4_t gravity_windy_dt_vec = vdupq_n_f32(gravity_windy_dt);
+    const float32x4_t dt_vec = vdupq_n_f32(dt);
+    
+    /* Process 8 particles at a time for better memory access patterns */
+    for (; i < (vectorized_count & ~7); i += 8) {
+        /* Load 8 particles' data using vld4 for better memory access */
+        float32x4x4_t data0 = vld4q_f32((float32_t*)&p[i]);
+        float32x4x4_t data1 = vld4q_f32((float32_t*)&p[i+4]);
+        
+        /* Extract x, y, vx, vy for first 4 particles */
+        float32x4_t x0 = data0.val[0];
+        float32x4_t y0 = data0.val[1];
+        float32x4_t vx0 = data0.val[2];
+        float32x4_t vy0 = data0.val[3];
+        
+        /* Extract x, y, vx, vy for next 4 particles */
+        float32x4_t x1 = data1.val[0];
+        float32x4_t y1 = data1.val[1];
+        float32x4_t vx1 = data1.val[2];
+        float32x4_t vy1 = data1.val[3];
+        
+        /* Apply forces exactly as in scalar implementation:
+           vx += windx * dt
+           vy += (gravity + windy) * dt */
+        vx0 = vaddq_f32(vx0, windx_dt_vec);
+        vy0 = vaddq_f32(vy0, gravity_windy_dt_vec);
+        vx1 = vaddq_f32(vx1, windx_dt_vec);
+        vy1 = vaddq_f32(vy1, gravity_windy_dt_vec);
+        
+        /* Update positions exactly as in scalar implementation:
+           x += vx * dt
+           y += vy * dt */
+        x0 = vaddq_f32(x0, vmulq_f32(vx0, dt_vec));
+        y0 = vaddq_f32(y0, vmulq_f32(vy0, dt_vec));
+        x1 = vaddq_f32(x1, vmulq_f32(vx1, dt_vec));
+        y1 = vaddq_f32(y1, vmulq_f32(vy1, dt_vec));
+        
+        /* Reassemble data for storage */
+        data0.val[0] = x0;
+        data0.val[1] = y0;
+        data0.val[2] = vx0;
+        data0.val[3] = vy0;
+        data1.val[0] = x1;
+        data1.val[1] = y1;
+        data1.val[2] = vx1;
+        data1.val[3] = vy1;
+        
+        /* Store updated data */
+        vst4q_f32((float32_t*)&p[i], data0);
+        vst4q_f32((float32_t*)&p[i+4], data1);
+    }
+    
+    /* Process remaining groups of 4 particles */
     for (; i < vectorized_count; i += 4) {
         /* Load 4 particles' data using individual loads for correct data layout */
         float32x4_t x = {p[i].x, p[i+1].x, p[i+2].x, p[i+3].x};
@@ -466,14 +521,14 @@ void simd_step_neon_optimized(void *particles, int count, float dt, float gravit
         /* Apply forces exactly as in scalar implementation:
            vx += windx * dt
            vy += (gravity + windy) * dt */
-        vx = vaddq_f32(vx, vdupq_n_f32(windx_dt));
-        vy = vaddq_f32(vy, vdupq_n_f32(gravity_windy_dt));
+        vx = vaddq_f32(vx, windx_dt_vec);
+        vy = vaddq_f32(vy, gravity_windy_dt_vec);
         
         /* Update positions exactly as in scalar implementation:
            x += vx * dt
            y += vy * dt */
-        x = vaddq_f32(x, vmulq_f32(vx, vdupq_n_f32(dt)));
-        y = vaddq_f32(y, vmulq_f32(vy, vdupq_n_f32(dt)));
+        x = vaddq_f32(x, vmulq_f32(vx, dt_vec));
+        y = vaddq_f32(y, vmulq_f32(vy, dt_vec));
         
         /* Store updated data using individual stores */
         p[i].x = vgetq_lane_f32(x, 0);
