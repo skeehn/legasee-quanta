@@ -42,12 +42,15 @@ typedef struct {
     ParticlePool *pool;
     int current_index;
     int active_count;
+    int total_active;
+    int *active_indices;
 } PoolIterator;
 
 PoolIterator pool_iterator_create(ParticlePool *pool);
 Particle *pool_iterator_next(PoolIterator *iter);
 int pool_iterator_has_next(const PoolIterator *iter);
 void pool_iterator_reset(PoolIterator *iter);
+void pool_iterator_destroy(PoolIterator *iter);
 
 PoolStats pool_get_stats(const ParticlePool *pool);
 void pool_reset_stats(ParticlePool *pool);
