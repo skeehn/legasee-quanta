@@ -5,6 +5,11 @@ SRCDIR = src
 SOURCES = $(wildcard $(SRCDIR)/*.c)
 OBJECTS = $(SOURCES:.c=.o)
 
+# Ensure new modules are included
+NEW_MODULES = src/error.o src/config.o src/log.o
+EXISTING_MODULES = $(filter-out $(NEW_MODULES), $(OBJECTS))
+OBJECTS = $(EXISTING_MODULES) $(NEW_MODULES)
+
 # Performance optimization flags
 OPT_CFLAGS = -O3 -march=native -ffast-math -funroll-loops
 
@@ -72,6 +77,10 @@ test-pool: $(TARGET)
 simd_test: clean
 	$(CC) $(CFLAGS) -o simd_test examples/simd_test.c src/simd.c src/particle.c -lm
 
+# Improvement testing
+improvement_test: clean
+	$(CC) $(CFLAGS) -o improvement_test examples/improvement_test.c src/error.c src/config.c src/log.c -lm
+
 # SIMD testing with x86-specific flags (for x86 platforms only)
 test-simd: $(TARGET)
 	$(CC) $(CFLAGS) $(SIMD_CFLAGS) -o simd_test examples/simd_test.c src/simd.c src/particle.c -lm
@@ -100,6 +109,7 @@ help:
 	@echo "  profile-run  - Run and generate performance profile"
 	@echo "  simd_test    - Build and run SIMD capability tests"
 	@echo "  test-simd    - Test with x86-specific SIMD flags"
+	@echo "  improvement_test - Test new error/config/log systems"
 	@echo "  install      - Install to system"
 	@echo "  uninstall    - Remove from system"
 	@echo "  help         - Show this help" 
