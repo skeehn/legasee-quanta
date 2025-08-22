@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "particle.h"
+#include "error.h"
 
 /* Performance monitoring */
 typedef struct {
@@ -26,6 +27,16 @@ typedef struct {
 /* Pool management functions */
 ParticlePool *pool_create(int capacity);
 void pool_destroy(ParticlePool *pool);
+
+/* Error-aware pool management functions */
+Error pool_create_with_error(int capacity, ParticlePool **pool_out);
+Error pool_allocate_particle_with_error(ParticlePool *pool, Particle **particle_out);
+Error pool_free_particle_with_error(ParticlePool *pool, Particle *particle);
+Error pool_iterator_create_with_error(ParticlePool *pool, PoolIterator *iter_out);
+Error pool_create_with_error(int capacity, ParticlePool **pool_out);
+Error pool_allocate_particle_with_error(ParticlePool *pool, Particle **particle_out);
+Error pool_free_particle_with_error(ParticlePool *pool, Particle *particle);
+Error pool_iterator_create_with_error(ParticlePool *pool, PoolIterator *iter_out);
 
 /* Particle allocation/deallocation */
 Particle *pool_allocate_particle(ParticlePool *pool);

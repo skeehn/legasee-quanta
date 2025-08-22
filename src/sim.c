@@ -1,6 +1,7 @@
 #include "sim.h"
 #include "pool.h"
 #include "simd.h"
+#include "error.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -384,4 +385,203 @@ void sim_print_pool_stats(const Simulation *sim) {
     if (sim && sim->pool) {
         pool_print_status(sim->pool);
     }
+}
+
+/* ===== ERROR-AWARE SIMULATION FUNCTIONS ===== */
+
+/* Create a new simulation with error handling */
+Error sim_create_with_error(int capacity, int width, int height, Simulation **sim_out) {
+    ERROR_CHECK(sim_out != NULL, ERROR_NULL_POINTER, "Simulation output pointer cannot be NULL");
+    ERROR_CHECK(capacity > 0, ERROR_INVALID_PARAMETER, "Capacity must be positive");
+    ERROR_CHECK(width > 0, ERROR_INVALID_PARAMETER, "Width must be positive");
+    ERROR_CHECK(height > 0, ERROR_INVALID_PARAMETER, "Height must be positive");
+    
+    Simulation *sim = error_malloc(sizeof(Simulation));
+    if (!sim) {
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate simulation structure");
+    }
+    
+    /* Create particle pool with error handling */
+    Error err = pool_create_with_error(capacity, &sim->pool);
+    if (err.code != SUCCESS) {
+        error_free(sim);
+        return err;
+    }
+    
+    sim->capacity = capacity;
+    sim->count = 0;
+    sim->width = width;
+    sim->height = height;
+    
+    /* Initialize physics parameters */
+    sim->gravity = 30.0f;  /* pixels per second squared */
+    sim->windx = 0.0f;
+    sim->windy = 0.0f;
+    
+    /* Initialize PRNG with current time */
+    sim->rng_state = (uint32_t)time(NULL);
+    
+    *sim_out = sim;
+    return (Error){SUCCESS};
+}
+
+/* Add a single particle with error handling */
+Error sim_add_particle_with_error(Simulation *sim, float x, float y, float vx, float vy) {
+    ERROR_CHECK(sim != NULL, ERROR_NULL_POINTER, "Simulation cannot be NULL");
+    ERROR_CHECK(sim->pool != NULL, ERROR_NULL_POINTER, "Particle pool cannot be NULL");
+    ERROR_CHECK(x >= 0.0f && x < sim->width, ERROR_OUT_OF_RANGE, "X position out of bounds");
+    ERROR_CHECK(y >= 0.0f && y < sim->height, ERROR_OUT_OF_RANGE, "Y position out of bounds");
+    
+    Particle *particle = NULL;
+    Error err = pool_allocate_particle_with_error(sim->pool, &particle);
+    if (err.code != SUCCESS) {
+        return err;
+    }
+    
+    particle->x = x;
+    particle->y = y;
+    particle->vx = vx;
+    particle->vy = vy;
+    sim->count++;
+    
+    return (Error){SUCCESS};
+}
+
+/* Spawn a burst of particles with error handling */
+Error sim_spawn_burst_with_error(Simulation *sim, float x, float y, int count, float spread) {
+    ERROR_CHECK(sim != NULL, ERROR_NULL_POINTER, "Simulation cannot be NULL");
+    ERROR_CHECK(sim->pool != NULL, ERROR_NULL_POINTER, "Particle pool cannot be NULL");
+    ERROR_CHECK(count > 0, ERROR_INVALID_PARAMETER, "Burst count must be positive");
+    ERROR_CHECK(x >= 0.0f && x < sim->width, ERROR_OUT_OF_RANGE, "X position out of bounds");
+    ERROR_CHECK(y >= 0.0f && y < sim->height, ERROR_OUT_OF_RANGE, "Y position out of bounds");
+    ERROR_CHECK(spread >= 0.0f && spread <= 2.0f * M_PI, ERROR_OUT_OF_RANGE, "Spread angle out of range");
+    
+    int spawn_count = count;
+    int available = pool_get_free_count(sim->pool);
+    if (spawn_count > available) {
+        spawn_count = available;
+    }
+    
+    int spawned = 0;
+    for (int i = 0; i < spawn_count; i++) {
+        Particle *particle = NULL;
+        Error err = pool_allocate_particle_with_error(sim->pool, &particle);
+        if (err.code != SUCCESS) {
+            break; /* Pool is full */
+        }
+        
+        /* Set position */
+        particle->x = x;
+        particle->y = y;
+        
+        /* Random direction within spread angle */
+        float angle = rand_range(&sim->rng_state, -spread, spread);
+        float speed = rand_range(&sim->rng_state, 5.0f, 20.0f);
+        
+        /* Set velocity */
+        particle->vx = speed * cosf(angle);
+        particle->vy = speed * sinf(angle);
+        
+        sim->count++;
+        spawned++;
+    }
+    
+    if (spawned == 0) {
+        return ERROR_CREATE(ERROR_OUT_OF_RESOURCES, "No particles could be spawned");
+    }
+    
+    return (Error){SUCCESS};
+}
+
+/* Step simulation with error handling */
+Error sim_step_with_error(Simulation *sim, float dt) {
+    ERROR_CHECK(sim != NULL, ERROR_NULL_POINTER, "Simulation cannot be NULL");
+    ERROR_CHECK(sim->pool != NULL, ERROR_NULL_POINTER, "Particle pool cannot be NULL");
+    ERROR_CHECK(dt > 0.0f, ERROR_INVALID_PARAMETER, "Time step must be positive");
+    
+    const float damping = 0.6f;  /* Velocity damping on wall collisions */
+    const float friction = 0.98f; /* Ground friction */
+    
+    /* Get the best available SIMD function with error handling */
+    simd_step_func_t simd_func;
+    Error err = simd_select_step_function_with_error(&simd_func);
+    if (err.code != SUCCESS) {
+        return err;
+    }
+    
+    /* Collect all active particles into a contiguous array for SIMD processing */
+    PoolIterator iter;
+    err = pool_iterator_create_with_error(sim->pool, &iter);
+    if (err.code != SUCCESS) {
+        return err;
+    }
+    
+    Particle *p;
+    int active_count = 0;
+    
+    /* First pass: count active particles */
+    while ((p = pool_iterator_next(&iter)) != NULL) {
+        active_count++;
+    }
+    
+    if (active_count > 0) {
+        /* Allocate temporary array for SIMD processing */
+        Particle *temp_particles = error_malloc(active_count * sizeof(Particle));
+        if (!temp_particles) {
+            pool_iterator_destroy(&iter);
+            return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate temporary particle array");
+        }
+        
+        /* Second pass: copy particles to temporary array */
+        pool_iterator_reset(&iter);
+        int idx = 0;
+        while ((p = pool_iterator_next(&iter)) != NULL) {
+            temp_particles[idx++] = *p;
+        }
+        
+        /* Process particles with SIMD */
+        simd_func(temp_particles, active_count, dt, sim->gravity, sim->windx, sim->windy);
+        
+        /* Third pass: copy results back and handle collisions */
+        pool_iterator_reset(&iter);
+        idx = 0;
+        while ((p = pool_iterator_next(&iter)) != NULL) {
+            *p = temp_particles[idx++];
+            
+            /* Wall collision detection and response */
+            if (p->x < 0) {
+                p->x = 0;
+                p->vx = -p->vx * damping;
+            } else if (p->x >= sim->width - 1) {
+                p->x = sim->width - 1;
+                p->vx = -p->vx * damping;
+            }
+            
+            if (p->y < 0) {
+                p->y = 0;
+                p->vy = -p->vy * damping;
+            } else if (p->y >= sim->height - 1) {
+                p->y = sim->height - 1;
+                p->vy = -p->vy * damping;
+                
+                /* Apply ground friction when near bottom */
+                if (fabsf(p->vy) < 2.0f) {
+                    p->vx *= friction;
+                }
+            }
+            
+            /* Remove particles that are too slow and near bottom */
+            if (p->y >= sim->height - 2 && fabsf(p->vx) < 0.5f && fabsf(p->vy) < 0.5f) {
+                pool_free_particle_with_error(sim->pool, p);
+                sim->count--;
+            }
+        }
+        
+        error_free(temp_particles);
+    }
+    
+    /* Clean up iterator */
+    pool_iterator_destroy(&iter);
+    
+    return (Error){SUCCESS};
 } 

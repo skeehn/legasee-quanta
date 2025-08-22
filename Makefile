@@ -81,6 +81,14 @@ simd_test: clean
 improvement_test: clean
 	$(CC) $(CFLAGS) -o improvement_test examples/improvement_test.c src/error.c src/config.c src/log.c -lm
 
+# Pool error handling integration test
+pool_error_test: clean
+	$(CC) $(CFLAGS) -o pool_error_test examples/pool_error_test.c src/error.c src/pool.c src/particle.c -lm
+
+# Comprehensive integration test
+integration_test: clean
+	$(CC) $(CFLAGS) -o integration_test examples/integration_test.c src/error.c src/pool.c src/simd.c src/sim.c src/term.c src/render.c src/input.c src/particle.c -lm
+
 # SIMD testing with x86-specific flags (for x86 platforms only)
 test-simd: $(TARGET)
 	$(CC) $(CFLAGS) $(SIMD_CFLAGS) -o simd_test examples/simd_test.c src/simd.c src/particle.c -lm
@@ -110,6 +118,8 @@ help:
 	@echo "  simd_test    - Build and run SIMD capability tests"
 	@echo "  test-simd    - Test with x86-specific SIMD flags"
 	@echo "  improvement_test - Test new error/config/log systems"
+	@echo "  pool_error_test - Test pool error handling integration"
+	@echo "  integration_test - Test all error handling systems together"
 	@echo "  install      - Install to system"
 	@echo "  uninstall    - Remove from system"
 	@echo "  help         - Show this help" 

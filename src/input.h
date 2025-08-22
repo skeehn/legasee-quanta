@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "sim.h"
+#include "error.h"
 
 /* UI state structure */
 typedef struct {
@@ -44,5 +45,11 @@ void input_get_status_text(const Simulation *sim, const UIState *ui, char *buffe
 bool input_is_paused(const UIState *ui);
 bool input_should_quit(const UIState *ui);
 bool input_show_hud(const UIState *ui);
+
+/* Error-aware input functions */
+Error input_init_state_with_error(UIState *ui);
+Error input_handle_key_with_error(int key, Simulation *sim, UIState *ui);
+Error input_process_frame_with_error(Simulation *sim, UIState *ui);
+Error input_get_status_text_with_error(const Simulation *sim, const UIState *ui, char *buffer, size_t buffer_size);
 
 #endif /* INPUT_H */ 

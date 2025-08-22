@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "error.h"
+#include "particle.h"
 
 /* SIMD feature flags */
 #define SIMD_NONE        0x00000000
@@ -78,5 +80,11 @@ void simd_step_sse(void *particles, int count, float dt, float gravity, float wi
 void simd_step_avx(void *particles, int count, float dt, float gravity, float windx, float windy);
 void simd_step_neon(void *particles, int count, float dt, float gravity, float windx, float windy);
 void simd_step_neon_optimized(void *particles, int count, float dt, float gravity, float windx, float windy);
+
+/* Error-aware SIMD functions */
+Error simd_aligned_alloc_with_error(size_t size, size_t alignment, void **ptr_out);
+Error simd_detect_capabilities_with_error(SIMDCapabilities *capabilities_out);
+Error simd_select_step_function_with_error(simd_step_func_t *func_out);
+Error simd_step_with_error(Particle *particles, int count, float dt, float gravity, float windx, float windy);
 
 #endif /* SIMD_H */

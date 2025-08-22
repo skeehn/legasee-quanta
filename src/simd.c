@@ -1,5 +1,6 @@
 #include "simd.h"
 #include "particle.h"
+#include "error.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -640,4 +641,110 @@ void simd_benchmark_functions(void) {
     printf("  Selected (%s): %.2f ms (%.2fx speedup)\n", simd_get_function_name(simd_func), simd_time, scalar_time / simd_time);
     
     simd_aligned_free(test_data);
+}
+
+/* ===== ERROR-AWARE SIMD FUNCTIONS ===== */
+
+/* Aligned memory allocation with error handling */
+Error simd_aligned_alloc_with_error(size_t size, size_t alignment, void **ptr_out) {
+    ERROR_CHECK_NULL(ptr_out, "Output pointer");
+    ERROR_CHECK_CONDITION(size > 0, ERROR_INVALID_PARAMETER, "Size must be greater than zero");
+    ERROR_CHECK_CONDITION(alignment >= sizeof(void*), ERROR_INVALID_PARAMETER, "Alignment must be at least sizeof(void*)");
+    ERROR_CHECK_CONDITION((alignment & (alignment - 1)) == 0, ERROR_INVALID_PARAMETER, "Alignment must be a power of 2");
+    ERROR_CHECK_CONDITION(size <= SIZE_MAX / 2, ERROR_INVALID_PARAMETER, "Requested size is too large");
+    
+    void *ptr = NULL;
+    
+    #ifdef _MSC_VER
+        ptr = _aligned_malloc(size, alignment);
+    #else
+        if (posix_memalign(&ptr, alignment, size) != 0) {
+            return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate aligned memory");
+        }
+    #endif
+    
+    if (!ptr) {
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate aligned memory");
+    }
+    
+    *ptr_out = ptr;
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
+}
+
+/* SIMD capability detection with error handling */
+Error simd_detect_capabilities_with_error(SIMDCapabilities *capabilities_out) {
+    ERROR_CHECK_NULL(capabilities_out, "Capabilities output pointer");
+    
+    if (!g_simd_initialized) {
+        /* Detect platform-specific capabilities */
+        #if defined(__x86_64__) || defined(__i386__)
+            g_simd_capabilities.features = detect_x86_capabilities();
+        #elif defined(__aarch64__)
+            g_simd_capabilities.features = detect_arm_capabilities();
+        #else
+            g_simd_capabilities.features = SIMD_NONE;
+        #endif
+        
+        /* Detect cache line size */
+        g_simd_capabilities.cache_line_size = detect_cache_line_size();
+        
+        /* Set preferred alignment based on capabilities */
+        if (simd_is_supported(SIMD_AVX)) {
+            g_simd_capabilities.preferred_alignment = 32;
+        } else if (simd_is_supported(SIMD_SSE)) {
+            g_simd_capabilities.preferred_alignment = 16;
+        } else if (simd_is_supported(SIMD_NEON)) {
+            g_simd_capabilities.preferred_alignment = 16;
+        } else {
+            g_simd_capabilities.preferred_alignment = sizeof(void*);
+        }
+        
+        g_simd_initialized = 1;
+    }
+    
+    *capabilities_out = g_simd_capabilities;
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
+}
+
+/* SIMD function selection with error handling */
+Error simd_select_step_function_with_error(simd_step_func_t *func_out) {
+    ERROR_CHECK_NULL(func_out, "Function output pointer");
+    
+    if (!g_simd_initialized) {
+        Error err = simd_detect_capabilities_with_error(&g_simd_capabilities);
+        if (err.code != SUCCESS) {
+            return err;
+        }
+    }
+    
+    /* Select best available implementation */
+    if (simd_is_supported(SIMD_AVX)) {
+        *func_out = simd_step_avx;
+    } else if (simd_is_supported(SIMD_SSE)) {
+        *func_out = simd_step_sse;
+    } else if (simd_is_supported(SIMD_NEON)) {
+        *func_out = simd_step_neon_optimized;
+    } else {
+        *func_out = simd_step_scalar;
+    }
+    
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
+}
+
+/* SIMD step function execution with error handling */
+Error simd_step_with_error(Particle *particles, int count, float dt, float gravity, float windx, float windy) {
+    ERROR_CHECK_NULL(particles, "Particles array");
+    ERROR_CHECK_CONDITION(count > 0, ERROR_INVALID_PARAMETER, "Particle count must be positive");
+    ERROR_CHECK_CONDITION(dt > 0.0f, ERROR_INVALID_PARAMETER, "Time step must be positive");
+    
+    simd_step_func_t func;
+    Error err = simd_select_step_function_with_error(&func);
+    if (err.code != SUCCESS) {
+        return err;
+    }
+    
+    /* Execute the selected function */
+    func(particles, count, dt, gravity, windx, windy);
+    
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
 }

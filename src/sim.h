@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "particle.h"
 #include "pool.h"
+#include "error.h"
 
 /* Simulation structure */
 typedef struct {
@@ -40,5 +41,11 @@ void sim_add_particle(Simulation *sim, float x, float y, float vx, float vy);
 /* Pool integration functions */
 ParticlePool *sim_get_pool(const Simulation *sim);
 void sim_print_pool_stats(const Simulation *sim);
+
+/* Error-aware simulation functions */
+Error sim_create_with_error(int capacity, int width, int height, Simulation **sim_out);
+Error sim_add_particle_with_error(Simulation *sim, float x, float y, float vx, float vy);
+Error sim_spawn_burst_with_error(Simulation *sim, float x, float y, int count, float spread);
+Error sim_step_with_error(Simulation *sim, float dt);
 
 #endif /* SIM_H */ 

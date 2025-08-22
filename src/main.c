@@ -10,6 +10,7 @@
 #include "render.h"
 #include "sim.h"
 #include "input.h"
+#include "error.h"
 
 /* Configuration structure */
 typedef struct {
@@ -419,4 +420,142 @@ int main(int argc, char *argv[]) {
     term_restore();
     
     return EXIT_SUCCESS;
+}
+
+/* ===== ERROR-AWARE INITIALIZATION FUNCTIONS ===== */
+
+/* Initialize application with error handling */
+Error app_init_with_error(int max_particles, int target_fps, int width, int height, 
+                         Renderer **renderer_out, Simulation **sim_out) {
+    ERROR_CHECK(renderer_out != NULL, ERROR_NULL_POINTER, "Renderer output pointer cannot be NULL");
+    ERROR_CHECK(sim_out != NULL, ERROR_NULL_POINTER, "Simulation output pointer cannot be NULL");
+    ERROR_CHECK(max_particles > 0, ERROR_INVALID_PARAMETER, "Max particles must be positive");
+    ERROR_CHECK(target_fps > 0, ERROR_INVALID_PARAMETER, "Target FPS must be positive");
+    ERROR_CHECK(width >= 20, ERROR_INVALID_PARAMETER, "Width must be at least 20");
+    ERROR_CHECK(height >= 10, ERROR_INVALID_PARAMETER, "Height must be at least 10");
+    
+    /* Initialize terminal in raw mode */
+    if (term_init_raw() != 0) {
+        return ERROR_CREATE(ERROR_SYSTEM_ERROR, "Failed to initialize terminal");
+    }
+    
+    /* Create renderer */
+    Renderer *renderer = renderer_create(width, height);
+    if (!renderer) {
+        term_restore();
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to create renderer");
+    }
+    
+    /* Create simulation with configured particle limit */
+    Simulation *sim = sim_create(max_particles, width, height);
+    if (!sim) {
+        renderer_destroy(renderer);
+        term_restore();
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to create simulation");
+    }
+    
+    *renderer_out = renderer;
+    *sim_out = sim;
+    return (Error){SUCCESS};
+}
+
+/* Parse size string with error handling */
+Error parse_size_string_with_error(const char *size_str, int *width_out, int *height_out) {
+    ERROR_CHECK(size_str != NULL, ERROR_NULL_POINTER, "Size string cannot be NULL");
+    ERROR_CHECK(width_out != NULL, ERROR_NULL_POINTER, "Width output pointer cannot be NULL");
+    ERROR_CHECK(height_out != NULL, ERROR_NULL_POINTER, "Height output pointer cannot be NULL");
+    
+    char *x_pos = strchr(size_str, 'x');
+    if (!x_pos) {
+        return ERROR_CREATE(ERROR_INVALID_PARAMETER, "Invalid size format, expected WxH");
+    }
+    
+    /* Create a copy to avoid modifying the original string */
+    char *size_copy = error_malloc(strlen(size_str) + 1);
+    if (!size_copy) {
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate size string copy");
+    }
+    
+    strcpy(size_copy, size_str);
+    char *x_pos_copy = strchr(size_copy, 'x');
+    *x_pos_copy = '\0';
+    
+    int width = atoi(size_copy);
+    int height = atoi(x_pos_copy + 1);
+    
+    error_free(size_copy);
+    
+    if (width <= 0 || height <= 0) {
+        return ERROR_CREATE(ERROR_INVALID_PARAMETER, "Width and height must be positive");
+    }
+    
+    if (width > 200 || height > 100) {
+        return ERROR_CREATE(ERROR_INVALID_PARAMETER, "Size too large (max 200x100)");
+    }
+    
+    *width_out = width;
+    *height_out = height;
+    return (Error){SUCCESS};
+}
+
+/* Parse command line arguments with error handling */
+Error parse_arguments_with_error(int argc, char *argv[], Config *config_out) {
+    ERROR_CHECK(config_out != NULL, ERROR_NULL_POINTER, "Config output pointer cannot be NULL");
+    ERROR_CHECK(argc > 0, ERROR_INVALID_PARAMETER, "Argument count must be positive");
+    ERROR_CHECK(argv != NULL, ERROR_NULL_POINTER, "Argument vector cannot be NULL");
+    
+    Config config = DEFAULT_CONFIG;
+    
+    static struct option long_options[] = {
+        {"max-particles", required_argument, 0, 'p'},
+        {"fps", required_argument, 0, 'f'},
+        {"size", required_argument, 0, 's'},
+        {"help", no_argument, 0, 'h'},
+        {"version", no_argument, 0, 'v'},
+        {0, 0, 0, 0}
+    };
+    
+    int opt;
+    while ((opt = getopt_long(argc, argv, "p:f:s:hv", long_options, NULL)) != -1) {
+        switch (opt) {
+            case 'p': {
+                int particles = atoi(optarg);
+                if (particles <= 0 || particles > 10000) {
+                    return ERROR_CREATE(ERROR_INVALID_PARAMETER, "Invalid particle count (1-10000)");
+                }
+                config.max_particles = particles;
+                break;
+            }
+            case 'f': {
+                int fps = atoi(optarg);
+                if (fps <= 0 || fps > 120) {
+                    return ERROR_CREATE(ERROR_INVALID_PARAMETER, "Invalid FPS (1-120)");
+                }
+                config.target_fps = fps;
+                break;
+            }
+            case 's': {
+                int width, height;
+                Error err = parse_size_string_with_error(optarg, &width, &height);
+                if (err.code != SUCCESS) {
+                    return err;
+                }
+                config.width = width;
+                config.height = height;
+                config.auto_size = 0;
+                break;
+            }
+            case 'h':
+                print_usage(argv[0]);
+                return ERROR_CREATE(ERROR_USER_REQUESTED_EXIT, "Help requested");
+            case 'v':
+                print_version();
+                return ERROR_CREATE(ERROR_USER_REQUESTED_EXIT, "Version requested");
+            default:
+                return ERROR_CREATE(ERROR_INVALID_PARAMETER, "Invalid command line option");
+        }
+    }
+    
+    *config_out = config;
+    return (Error){SUCCESS};
 } 

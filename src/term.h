@@ -2,6 +2,7 @@
 #define TERM_H
 
 #include <stdint.h>
+#include "error.h"
 
 /* Terminal control functions */
 int term_init_raw(void);
@@ -21,5 +22,11 @@ void term_reset_color(void);
 
 /* Terminal size detection */
 int term_get_size(int *width, int *height);
+
+/* Error-aware terminal functions */
+Error term_init_raw_with_error(void);
+Error term_get_size_with_error(int *width_out, int *height_out);
+Error term_getch_with_error(int *ch_out);
+Error term_is_initialized_with_error(int *initialized_out);
 
 #endif /* TERM_H */ 

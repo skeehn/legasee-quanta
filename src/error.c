@@ -8,14 +8,16 @@
 static ErrorStats g_error_stats = {0};
 
 /* Error code to string mapping */
-static const char* ERROR_CODE_STRINGS[] = {
-    [SUCCESS] = "SUCCESS",
-    [ERROR_NULL_POINTER] = "NULL_POINTER",
-    [ERROR_MEMORY_ALLOCATION] = "MEMORY_ALLOCATION",
-    [ERROR_INVALID_PARAMETER] = "INVALID_PARAMETER",
-    [ERROR_OUT_OF_RANGE] = "OUT_OF_RANGE",
-    [ERROR_INVALID_STATE] = "INVALID_STATE",
-    [ERROR_UNKNOWN] = "UNKNOWN"
+static const char *ERROR_CODE_STRINGS[] = {
+    "SUCCESS",
+    "MEMORY_ALLOCATION",
+    "INVALID_PARAMETER", 
+    "NULL_POINTER",
+    "OUT_OF_RANGE",
+    "OUT_OF_RESOURCES",
+    "SYSTEM_ERROR",
+    "USER_REQUESTED_EXIT",
+    "UNKNOWN"
 };
 
 /* Initialize error handling system */
@@ -74,22 +76,30 @@ void error_print(const Error *error) {
 
 /* Memory allocation with error handling */
 void* error_malloc(size_t size) {
-    if (size == 0) {
-        error_print(&(Error){ERROR_INVALID_PARAMETER, "malloc: size cannot be zero", __FILE__, __LINE__, __func__});
-        return NULL;
-    }
-    
     void *ptr = malloc(size);
     if (!ptr) {
-        error_print(&(Error){ERROR_MEMORY_ALLOCATION, "malloc: allocation failed", __FILE__, __LINE__, __func__});
+        g_error_stats.memory_allocation_failures++;
+    } else {
+        g_error_stats.memory_allocations++;
     }
-    
+    return ptr;
+}
+
+/* Memory allocation with error handling (calloc) */
+void* error_calloc(size_t nmemb, size_t size) {
+    void *ptr = calloc(nmemb, size);
+    if (!ptr) {
+        g_error_stats.memory_allocation_failures++;
+    } else {
+        g_error_stats.memory_allocations++;
+    }
     return ptr;
 }
 
 void error_free(void *ptr) {
     if (ptr) {
         free(ptr);
+        g_error_stats.memory_deallocations++;
     }
 }
 
@@ -100,7 +110,7 @@ Error error_check_null(const void *ptr, const char *name) {
         snprintf(message, sizeof(message), "NULL pointer: %s", name ? name : "unknown");
         return ERROR_CREATE(ERROR_NULL_POINTER, message);
     }
-    return (Error){SUCCESS};
+    return (Error){SUCCESS, NULL};
 }
 
 /* Range validation */
@@ -111,7 +121,7 @@ Error error_check_range(int value, int min, int max, const char *name) {
                 name ? name : "value", value, min, max);
         return ERROR_CREATE(ERROR_OUT_OF_RANGE, message);
     }
-    return (Error){SUCCESS};
+    return (Error){SUCCESS, NULL};
 }
 
 /* Get error statistics */

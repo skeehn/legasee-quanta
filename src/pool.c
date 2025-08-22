@@ -1,4 +1,5 @@
 #include "pool.h"
+#include "error.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -281,4 +282,163 @@ void pool_print_status(const ParticlePool *pool) {
     printf("  Failures: %llu\n", stats.allocation_failures);
     printf("  Avg Allocation Time: %.2f μs\n", stats.avg_allocation_time);
     printf("  Avg Deallocation Time: %.2f μs\n", stats.avg_deallocation_time);
+}
+
+/* ===== ERROR-AWARE POOL FUNCTIONS ===== */
+
+/* Create a new particle pool with error handling */
+Error pool_create_with_error(int capacity, ParticlePool **pool_out) {
+    ERROR_CHECK_CONDITION(capacity > 0, ERROR_INVALID_PARAMETER, "Pool capacity must be positive");
+    ERROR_CHECK_NULL(pool_out, "Pool output pointer");
+    
+    ParticlePool *pool = error_malloc(sizeof(ParticlePool));
+    if (pool == NULL) {
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate pool structure");
+    }
+    
+    /* Allocate particle array */
+    pool->pool = error_malloc(capacity * sizeof(Particle));
+    if (!pool->pool) {
+        error_free(pool);
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate particle array");
+    }
+    
+    /* Allocate free indices stack */
+    pool->free_indices = error_malloc(capacity * sizeof(int));
+    if (!pool->free_indices) {
+        error_free(pool->pool);
+        error_free(pool);
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate free indices array");
+    }
+    
+    /* Initialize pool state */
+    pool->total_capacity = capacity;
+    pool->active_count = 0;
+    pool->free_count = capacity;
+    
+    /* Initialize free indices stack (LIFO for better cache locality) */
+    for (int i = 0; i < capacity; i++) {
+        pool->free_indices[i] = capacity - 1 - i; /* Reverse order for LIFO */
+    }
+    
+    /* Initialize statistics */
+    pool->stats.allocations = 0;
+    pool->stats.deallocations = 0;
+    pool->stats.allocation_failures = 0;
+    pool->stats.avg_allocation_time = 0.0;
+    pool->stats.avg_deallocation_time = 0.0;
+    
+    *pool_out = pool;
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
+}
+
+/* Allocate a particle from the pool with error handling */
+Error pool_allocate_particle_with_error(ParticlePool *pool, Particle **particle_out) {
+    ERROR_CHECK_NULL(pool, "Pool");
+    ERROR_CHECK_NULL(particle_out, "Particle output pointer");
+    ERROR_CHECK_CONDITION(pool->free_count > 0, ERROR_OUT_OF_RANGE, "No free particles available in pool");
+    
+    double start_time = get_time_us();
+    
+    /* Pop from free indices stack */
+    pool->free_count--;
+    int index = pool->free_indices[pool->free_count];
+    
+    /* Get particle and initialize it */
+    Particle *particle = &pool->pool[index];
+    memset(particle, 0, sizeof(Particle));
+    
+    /* Update statistics */
+    pool->active_count++;
+    pool->stats.allocations++;
+    
+    double end_time = get_time_us();
+    double duration = end_time - start_time;
+    
+    /* Update average allocation time */
+    if (pool->stats.allocations == 1) {
+        pool->stats.avg_allocation_time = duration;
+    } else {
+        pool->stats.avg_allocation_time = 
+            (pool->stats.avg_allocation_time * (pool->stats.allocations - 1) + duration) / pool->stats.allocations;
+    }
+    
+    *particle_out = particle;
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
+}
+
+/* Free a particle back to the pool with error handling */
+Error pool_free_particle_with_error(ParticlePool *pool, Particle *particle) {
+    ERROR_CHECK_NULL(pool, "Pool");
+    ERROR_CHECK_NULL(particle, "Particle");
+    
+    /* Calculate particle index */
+    int index = particle - pool->pool;
+    ERROR_CHECK_CONDITION(index >= 0 && index < pool->total_capacity, ERROR_INVALID_PARAMETER, "Invalid particle pointer");
+    
+    double start_time = get_time_us();
+    
+    /* Push to free indices stack */
+    pool->free_indices[pool->free_count] = index;
+    pool->free_count++;
+    
+    /* Update statistics */
+    pool->active_count--;
+    pool->stats.deallocations++;
+    
+    double end_time = get_time_us();
+    double duration = end_time - start_time;
+    
+    /* Update average deallocation time */
+    if (pool->stats.deallocations == 1) {
+        pool->stats.avg_deallocation_time = duration;
+    } else {
+        pool->stats.avg_deallocation_time = 
+            (pool->stats.avg_deallocation_time * (pool->stats.deallocations - 1) + duration) / pool->stats.deallocations;
+    }
+    
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
+}
+
+/* Create iterator for active particles with error handling */
+Error pool_iterator_create_with_error(ParticlePool *pool, PoolIterator *iter_out) {
+    ERROR_CHECK_NULL(pool, "Pool");
+    ERROR_CHECK_NULL(iter_out, "Iterator output pointer");
+    
+    PoolIterator iter = {0};
+    iter.pool = pool;
+    iter.current_index = 0;
+    iter.active_count = 0;
+    
+    /* Precompute active indices for O(1) iteration */
+    iter.active_indices = error_malloc(pool->total_capacity * sizeof(int));
+    if (!iter.active_indices) {
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate iterator active indices");
+    }
+    
+    /* Mark all indices as potentially active */
+    char *is_free = error_calloc(pool->total_capacity, sizeof(char));
+    if (!is_free) {
+        error_free(iter.active_indices);
+        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate iterator free markers");
+    }
+    
+    /* Mark free indices */
+    for (int i = 0; i < pool->free_count; i++) {
+        is_free[pool->free_indices[i]] = 1;
+    }
+    
+    /* Collect active indices */
+    int active_idx = 0;
+    for (int i = 0; i < pool->total_capacity; i++) {
+        if (!is_free[i]) {
+            iter.active_indices[active_idx++] = i;
+        }
+    }
+    
+    iter.total_active = active_idx;
+    error_free(is_free);
+    
+    *iter_out = iter;
+    return (Error){SUCCESS, NULL, NULL, 0, NULL};
 }
