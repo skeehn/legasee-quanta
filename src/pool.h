@@ -24,6 +24,15 @@ typedef struct {
     PoolStats stats;          /* Performance statistics */
 } ParticlePool;
 
+/* Pool iteration for active particles */
+typedef struct {
+    ParticlePool *pool;
+    int current_index;
+    int active_count;
+    int total_active;
+    int *active_indices;
+} PoolIterator;
+
 /* Pool management functions */
 ParticlePool *pool_create(int capacity);
 void pool_destroy(ParticlePool *pool);
@@ -47,15 +56,6 @@ int pool_get_free_count(const ParticlePool *pool);
 int pool_get_active_count(const ParticlePool *pool);
 int pool_get_capacity(const ParticlePool *pool);
 float pool_get_utilization(const ParticlePool *pool);
-
-/* Pool iteration for active particles */
-typedef struct {
-    ParticlePool *pool;
-    int current_index;
-    int active_count;
-    int total_active;
-    int *active_indices;
-} PoolIterator;
 
 PoolIterator pool_iterator_create(ParticlePool *pool);
 Particle *pool_iterator_next(PoolIterator *iter);

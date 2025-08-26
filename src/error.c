@@ -110,7 +110,7 @@ Error error_check_null(const void *ptr, const char *name) {
         snprintf(message, sizeof(message), "NULL pointer: %s", name ? name : "unknown");
         return ERROR_CREATE(ERROR_NULL_POINTER, message);
     }
-    return (Error){SUCCESS, NULL};
+    return (Error){SUCCESS, NULL, __FILE__, __LINE__, __func__};
 }
 
 /* Range validation */
@@ -121,7 +121,7 @@ Error error_check_range(int value, int min, int max, const char *name) {
                 name ? name : "value", value, min, max);
         return ERROR_CREATE(ERROR_OUT_OF_RANGE, message);
     }
-    return (Error){SUCCESS, NULL};
+    return (Error){SUCCESS, NULL, __FILE__, __LINE__, __func__};
 }
 
 /* Get error statistics */

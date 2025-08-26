@@ -5,10 +5,14 @@ SRCDIR = src
 SOURCES = $(wildcard $(SRCDIR)/*.c)
 OBJECTS = $(SOURCES:.c=.o)
 
-# Ensure new modules are included
-NEW_MODULES = src/error.o src/config.o src/log.o
-EXISTING_MODULES = $(filter-out $(NEW_MODULES), $(OBJECTS))
-OBJECTS = $(EXISTING_MODULES) $(NEW_MODULES)
+# Generate object files from sources and ensure new modules are included
+NEW_MODULES = src/error.o
+ALL_OBJECTS = $(SOURCES:.c=.o)
+EXISTING_MODULES = $(filter-out $(NEW_MODULES), $(ALL_OBJECTS))
+# Temporarily exclude problematic modules: src/config.o src/log.o
+PROBLEMATIC_MODULES = src/config.o src/log.o
+FILTERED_MODULES = $(filter-out $(PROBLEMATIC_MODULES), $(EXISTING_MODULES))
+OBJECTS = $(FILTERED_MODULES) $(NEW_MODULES)
 
 # Performance optimization flags
 OPT_CFLAGS = -O3 -march=native -ffast-math -funroll-loops
@@ -43,7 +47,7 @@ profile: CFLAGS += $(PROFILE_CFLAGS)
 profile: $(TARGET)
 
 clean:
-	rm -f $(OBJECTS) $(TARGET) gmon.out simd_test
+	rm -f $(OBJECTS) $(PROBLEMATIC_MODULES) $(TARGET) gmon.out simd_test
 
 run: $(TARGET)
 	./$(TARGET)

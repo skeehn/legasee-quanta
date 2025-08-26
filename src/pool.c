@@ -277,9 +277,9 @@ void pool_print_status(const ParticlePool *pool) {
     printf("  Active: %d\n", pool->active_count);
     printf("  Free: %d\n", pool->free_count);
     printf("  Utilization: %.1f%%\n", pool_get_utilization(pool));
-    printf("  Allocations: %llu\n", stats.allocations);
-    printf("  Deallocations: %llu\n", stats.deallocations);
-    printf("  Failures: %llu\n", stats.allocation_failures);
+    printf("  Allocations: %lu\n", (unsigned long)stats.allocations);
+    printf("  Deallocations: %lu\n", (unsigned long)stats.deallocations);
+    printf("  Failures: %lu\n", (unsigned long)stats.allocation_failures);
     printf("  Avg Allocation Time: %.2f μs\n", stats.avg_allocation_time);
     printf("  Avg Deallocation Time: %.2f μs\n", stats.avg_deallocation_time);
 }

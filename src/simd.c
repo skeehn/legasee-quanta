@@ -11,6 +11,11 @@
 #include <arm_neon.h>
 #endif
 
+/* x86 CPUID intrinsics */
+#if defined(__x86_64__) || defined(__i386__)
+#include <cpuid.h>
+#endif
+
 /* Performance measurement helper */
 static double get_time_ms(void) {
     struct timeval tv;
@@ -81,10 +86,6 @@ static uint32_t detect_arm_capabilities(void) {
     features |= SIMD_NEON;
     
     return features;
-}
-#else
-static uint32_t detect_arm_capabilities(void) {
-    return SIMD_NONE;
 }
 #endif
 
