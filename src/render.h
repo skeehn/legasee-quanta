@@ -13,7 +13,6 @@ typedef struct {
 } Renderer;
 
 /* Core renderer functions */
-Renderer *renderer_create(int width, int height);
 void renderer_destroy(Renderer *renderer);
 void renderer_clear(Renderer *renderer);
 void renderer_plot(Renderer *renderer, int x, int y, char glyph, uint32_t color);

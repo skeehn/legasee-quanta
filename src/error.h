@@ -30,11 +30,10 @@ typedef struct {
     (Error){code, msg, __FILE__, __LINE__, __func__}
 
 /* Error checking macros */
-#define ERROR_CHECK(expr) \
+#define ERROR_CHECK(condition, error_code, message) \
     do { \
-        Error _err = (expr); \
-        if (_err.code != SUCCESS) { \
-            return _err; \
+        if (!(condition)) { \
+            return ERROR_CREATE(error_code, message); \
         } \
     } while(0)
 
@@ -50,8 +49,8 @@ void *error_calloc(size_t nmemb, size_t size);
 void error_free(void *ptr);
 
 /* Error validation helpers */
-int error_check_null(const void *ptr, const char *name);
-int error_check_range(int value, int min, int max, const char *name);
+Error error_check_null(const void *ptr, const char *name);
+Error error_check_range(int value, int min, int max, const char *name);
 
 /* Error statistics structure */
 typedef struct {
@@ -63,6 +62,9 @@ typedef struct {
     size_t resource_errors;
     size_t system_errors;
     size_t unknown_errors;
+    size_t memory_allocations;
+    size_t memory_allocation_failures;
+    size_t memory_deallocations;
 } ErrorStats;
 
 /* Error statistics functions */

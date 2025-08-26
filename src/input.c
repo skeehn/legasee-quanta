@@ -52,7 +52,7 @@ void input_handle_key(int key, Simulation *sim, UIState *ui) {
             
         case KEY_SPACE:
             /* Spawn particle burst at center */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           BURST_COUNT, BURST_SPREAD);
             break;
             
@@ -101,19 +101,19 @@ void input_handle_key(int key, Simulation *sim, UIState *ui) {
             
         case '1':
             /* Spawn small burst */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           50, BURST_SPREAD);
             break;
             
         case '2':
             /* Spawn medium burst */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           100, BURST_SPREAD);
             break;
             
         case '3':
             /* Spawn large burst */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           200, BURST_SPREAD);
             break;
             
@@ -190,7 +190,7 @@ bool input_show_hud(const UIState *ui) {
 
 /* Initialize UI state with error handling */
 Error input_init_state_with_error(UIState *ui) {
-    ERROR_CHECK(ui != NULL, ERROR_NULL_POINTER, "UI state pointer cannot be NULL");
+    ERROR_CHECK_NULL(ui, "UI state pointer");
     
     ui->paused = false;
     ui->quit = false;
@@ -202,8 +202,8 @@ Error input_init_state_with_error(UIState *ui) {
 
 /* Handle a single key press with error handling */
 Error input_handle_key_with_error(int key, Simulation *sim, UIState *ui) {
-    ERROR_CHECK(sim != NULL, ERROR_NULL_POINTER, "Simulation cannot be NULL");
-    ERROR_CHECK(ui != NULL, ERROR_NULL_POINTER, "UI state cannot be NULL");
+    ERROR_CHECK_NULL(sim, "Simulation");
+    ERROR_CHECK_NULL(ui, "UI state");
     
     switch (key) {
         case KEY_W:
@@ -237,7 +237,7 @@ Error input_handle_key_with_error(int key, Simulation *sim, UIState *ui) {
             
         case KEY_SPACE:
             /* Spawn particle burst at center */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           BURST_COUNT, BURST_SPREAD);
             break;
             
@@ -286,19 +286,19 @@ Error input_handle_key_with_error(int key, Simulation *sim, UIState *ui) {
             
         case '1':
             /* Spawn small burst */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           50, BURST_SPREAD);
             break;
             
         case '2':
             /* Spawn medium burst */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           100, BURST_SPREAD);
             break;
             
         case '3':
             /* Spawn large burst */
-            sim_spawn_burst(sim, sim->width / 2, sim->height / 3, 
+            sim_spawn_burst(sim, (float)sim->width / 2.0f, (float)sim->height / 3.0f, 
                           200, BURST_SPREAD);
             break;
             
@@ -322,8 +322,8 @@ Error input_handle_key_with_error(int key, Simulation *sim, UIState *ui) {
 
 /* Process input for the current frame with error handling */
 Error input_process_frame_with_error(Simulation *sim, UIState *ui) {
-    ERROR_CHECK(sim != NULL, ERROR_NULL_POINTER, "Simulation cannot be NULL");
-    ERROR_CHECK(ui != NULL, ERROR_NULL_POINTER, "UI state cannot be NULL");
+    ERROR_CHECK_NULL(sim, "Simulation");
+    ERROR_CHECK_NULL(ui, "UI state");
     
     /* Check for quit signal from terminal */
     if (term_should_quit()) {
@@ -347,10 +347,10 @@ Error input_process_frame_with_error(Simulation *sim, UIState *ui) {
 
 /* Get status text with error handling */
 Error input_get_status_text_with_error(const Simulation *sim, const UIState *ui, char *buffer, size_t buffer_size) {
-    ERROR_CHECK(sim != NULL, ERROR_NULL_POINTER, "Simulation cannot be NULL");
-    ERROR_CHECK(ui != NULL, ERROR_NULL_POINTER, "UI state cannot be NULL");
-    ERROR_CHECK(buffer != NULL, ERROR_NULL_POINTER, "Buffer cannot be NULL");
-    ERROR_CHECK(buffer_size > 0, ERROR_INVALID_PARAMETER, "Buffer size must be positive");
+    ERROR_CHECK_NULL(sim, "Simulation");
+    ERROR_CHECK_NULL(ui, "UI state");
+    ERROR_CHECK_NULL(buffer, "Buffer");
+    ERROR_CHECK_CONDITION(buffer_size > 0, ERROR_INVALID_PARAMETER, "Buffer size must be positive");
     
     const char *pause_text = ui->paused ? "PAUSED" : "RUNNING";
     const char *gravity_text = sim->gravity > 0.0f ? "ON" : "OFF";

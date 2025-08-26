@@ -6,40 +6,7 @@
 #include <string.h>
 #include <math.h>
 
-/* Create a new renderer with specified dimensions */
-Renderer *renderer_create(int width, int height) {
-    Renderer *renderer = malloc(sizeof(Renderer));
-    if (!renderer) {
-        return NULL;
-    }
-    
-    renderer->width = width;
-    renderer->height = height;
-    
-    /* Allocate glyph and color arrays */
-    renderer->glyphs = malloc(width * height * sizeof(char));
-    renderer->colors = malloc(width * height * sizeof(uint32_t));
-    
-    if (!renderer->glyphs || !renderer->colors) {
-        renderer_destroy(renderer);
-        return NULL;
-    }
-    
-    /* Allocate row buffer for efficient output */
-    /* Estimate max row size: width * (color_escape + glyph) + newline */
-    size_t max_row_size = width * 32 + 2; /* Conservative estimate */
-    renderer->row_buffer = malloc(max_row_size);
-    
-    if (!renderer->row_buffer) {
-        renderer_destroy(renderer);
-        return NULL;
-    }
-    
-    /* Initialize with default values */
-    renderer_clear(renderer);
-    
-    return renderer;
-}
+/* Note: Old renderer_create function removed - use renderer_create_with_error instead */
 
 /* Destroy renderer and free all memory */
 void renderer_destroy(Renderer *renderer) {

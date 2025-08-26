@@ -212,9 +212,10 @@ int main(int argc, char *argv[]) {
     }
     
     /* Create renderer */
-    Renderer *renderer = renderer_create(width, height);
-    if (!renderer) {
-        fprintf(stderr, "Failed to create renderer\n");
+    Renderer *renderer;
+    Error err = renderer_create_with_error(width, height, &renderer);
+    if (err.code != SUCCESS) {
+        fprintf(stderr, "Failed to create renderer: %s\n", err.message);
         term_restore();
         return EXIT_FAILURE;
     }
@@ -265,6 +266,7 @@ int main(int argc, char *argv[]) {
     
     /* Performance monitoring */
     double frame_times[60] = {0}; /* Store last 60 frame times */
+    (void)frame_times; /* Suppress unused variable warning */
     int frame_time_index = 0;
     double target_frame_time = 1000.0 / config.target_fps;
     
@@ -427,12 +429,12 @@ int main(int argc, char *argv[]) {
 /* Initialize application with error handling */
 Error app_init_with_error(int max_particles, int target_fps, int width, int height, 
                          Renderer **renderer_out, Simulation **sim_out) {
-    ERROR_CHECK(renderer_out != NULL, ERROR_NULL_POINTER, "Renderer output pointer cannot be NULL");
-    ERROR_CHECK(sim_out != NULL, ERROR_NULL_POINTER, "Simulation output pointer cannot be NULL");
-    ERROR_CHECK(max_particles > 0, ERROR_INVALID_PARAMETER, "Max particles must be positive");
-    ERROR_CHECK(target_fps > 0, ERROR_INVALID_PARAMETER, "Target FPS must be positive");
-    ERROR_CHECK(width >= 20, ERROR_INVALID_PARAMETER, "Width must be at least 20");
-    ERROR_CHECK(height >= 10, ERROR_INVALID_PARAMETER, "Height must be at least 10");
+    ERROR_CHECK_NULL(renderer_out, "Renderer output pointer");
+    ERROR_CHECK_NULL(sim_out, "Simulation output pointer");
+    ERROR_CHECK_CONDITION(max_particles > 0, ERROR_INVALID_PARAMETER, "Max particles must be positive");
+    ERROR_CHECK_CONDITION(target_fps > 0, ERROR_INVALID_PARAMETER, "Target FPS must be positive");
+    ERROR_CHECK_CONDITION(width >= 20, ERROR_INVALID_PARAMETER, "Width must be at least 20");
+    ERROR_CHECK_CONDITION(height >= 10, ERROR_INVALID_PARAMETER, "Height must be at least 10");
     
     /* Initialize terminal in raw mode */
     if (term_init_raw() != 0) {
@@ -440,10 +442,11 @@ Error app_init_with_error(int max_particles, int target_fps, int width, int heig
     }
     
     /* Create renderer */
-    Renderer *renderer = renderer_create(width, height);
-    if (!renderer) {
+    Renderer *renderer;
+    Error err = renderer_create_with_error(width, height, &renderer);
+    if (err.code != SUCCESS) {
         term_restore();
-        return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to create renderer");
+        return err;
     }
     
     /* Create simulation with configured particle limit */
