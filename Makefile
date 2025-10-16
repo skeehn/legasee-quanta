@@ -24,7 +24,7 @@ NEON_CFLAGS = -mfpu=neon -mfloat-abi=hard
 DEBUG_CFLAGS = -g -O0 -DDEBUG
 PROFILE_CFLAGS = -pg -O2
 
-.PHONY: all clean run debug profile test install uninstall help
+.PHONY: all clean run debug profile test install uninstall help demo_enhanced
 
 all: $(TARGET)
 
@@ -106,6 +106,10 @@ uninstall:
 	rm -f /usr/local/bin/$(TARGET)
 	@echo "Uninstalled from /usr/local/bin/$(TARGET)"
 
+# Enhanced demo with new features
+demo_enhanced: clean
+	$(CC) $(CFLAGS) -o demo_enhanced src/demo_enhanced.c src/term.c -lm
+
 help:
 	@echo "Available targets:"
 	@echo "  all          - Build the simulator (default)"
@@ -126,4 +130,5 @@ help:
 	@echo "  integration_test - Test all error handling systems together"
 	@echo "  install      - Install to system"
 	@echo "  uninstall    - Remove from system"
-	@echo "  help         - Show this help" 
+	@echo "  help         - Show this help"
+	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields" 
