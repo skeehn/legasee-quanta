@@ -9,8 +9,8 @@ OBJECTS = $(SOURCES:.c=.o)
 NEW_MODULES = src/error.o
 ALL_OBJECTS = $(SOURCES:.c=.o)
 EXISTING_MODULES = $(filter-out $(NEW_MODULES), $(ALL_OBJECTS))
-# Temporarily exclude problematic modules: src/config.o src/log.o
-PROBLEMATIC_MODULES = src/config.o src/log.o
+# Temporarily exclude problematic modules: src/config.o src/log.o src/demo_enhanced.o
+PROBLEMATIC_MODULES = src/config.o src/log.o src/demo_enhanced.o
 FILTERED_MODULES = $(filter-out $(PROBLEMATIC_MODULES), $(EXISTING_MODULES))
 OBJECTS = $(FILTERED_MODULES) $(NEW_MODULES)
 

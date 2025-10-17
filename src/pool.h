@@ -18,6 +18,7 @@ typedef struct {
 typedef struct {
     Particle *pool;           /* Array of pre-allocated particles */
     int *free_indices;        /* Stack of available particle indices */
+    uint8_t *active_flags;    /* Occupancy flags for O(1) iteration */
     int free_count;           /* Number of free particles available */
     int total_capacity;       /* Total capacity of the pool */
     int active_count;         /* Number of currently active particles */
@@ -28,9 +29,6 @@ typedef struct {
 typedef struct {
     ParticlePool *pool;
     int current_index;
-    int active_count;
-    int total_active;
-    int *active_indices;
 } PoolIterator;
 
 /* Pool management functions */
@@ -38,10 +36,6 @@ ParticlePool *pool_create(int capacity);
 void pool_destroy(ParticlePool *pool);
 
 /* Error-aware pool management functions */
-Error pool_create_with_error(int capacity, ParticlePool **pool_out);
-Error pool_allocate_particle_with_error(ParticlePool *pool, Particle **particle_out);
-Error pool_free_particle_with_error(ParticlePool *pool, Particle *particle);
-Error pool_iterator_create_with_error(ParticlePool *pool, PoolIterator *iter_out);
 Error pool_create_with_error(int capacity, ParticlePool **pool_out);
 Error pool_allocate_particle_with_error(ParticlePool *pool, Particle **particle_out);
 Error pool_free_particle_with_error(ParticlePool *pool, Particle *particle);
