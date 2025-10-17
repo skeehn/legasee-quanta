@@ -13,6 +13,8 @@ typedef struct {
     float gravity, windx, windy;
     int width, height;
     uint32_t rng_state;
+    Particle *simd_buffer;    /* Cached SIMD working buffer */
+    int simd_buffer_capacity; /* Number of particles the buffer can hold */
 } Simulation;
 
 /* Core simulation functions */

@@ -28,6 +28,31 @@ static float rand_range(uint32_t *state, float min, float max) {
     return min + (max - min) * rand_float(state);
 }
 
+/* Ensure the simulation has a SIMD buffer with at least required_count slots */
+static Particle *sim_acquire_simd_buffer(Simulation *sim, int required_count) {
+    if (!sim || required_count <= 0) {
+        return NULL;
+    }
+
+    if (sim->simd_buffer && sim->simd_buffer_capacity >= required_count) {
+        return sim->simd_buffer;
+    }
+
+    size_t alignment = simd_get_preferred_alignment();
+    Particle *new_buffer = (Particle *)simd_aligned_alloc((size_t)required_count * sizeof(Particle), alignment);
+    if (!new_buffer) {
+        return NULL;
+    }
+
+    if (sim->simd_buffer) {
+        simd_aligned_free(sim->simd_buffer);
+    }
+
+    sim->simd_buffer = new_buffer;
+    sim->simd_buffer_capacity = required_count;
+    return sim->simd_buffer;
+}
+
 /* Create a new simulation with specified capacity and dimensions */
 Simulation *sim_create(int capacity, int width, int height) {
     Simulation *sim = malloc(sizeof(Simulation));
@@ -46,6 +71,8 @@ Simulation *sim_create(int capacity, int width, int height) {
     sim->count = 0;
     sim->width = width;
     sim->height = height;
+    sim->simd_buffer = NULL;
+    sim->simd_buffer_capacity = 0;
     
     /* Initialize physics parameters */
     sim->gravity = 30.0f;  /* pixels per second squared */
@@ -61,6 +88,9 @@ Simulation *sim_create(int capacity, int width, int height) {
 /* Destroy simulation and free all memory */
 void sim_destroy(Simulation *sim) {
     if (sim) {
+        if (sim->simd_buffer) {
+            simd_aligned_free(sim->simd_buffer);
+        }
         pool_destroy(sim->pool);
         free(sim);
     }
@@ -186,61 +216,48 @@ void sim_spawn_burst(Simulation *sim, float x, float y, int count, float spread)
 /* Step simulation forward by dt seconds using Euler integration */
 void sim_step(Simulation *sim, float dt) {
     if (!sim || !sim->pool) return;
-    
+
     const float damping = 0.6f;  /* Velocity damping on wall collisions */
     const float friction = 0.98f; /* Ground friction */
-    
+
     /* Get the best available SIMD function */
     simd_step_func_t simd_func = simd_select_step_function();
-    
-    /* Collect all active particles into a contiguous array for SIMD processing */
-    PoolIterator iter = pool_iterator_create(sim->pool);
-    Particle *p;
-    int active_count = 0;
-    
-    /* First pass: count active particles */
-    while ((p = pool_iterator_next(&iter)) != NULL) {
-        active_count++;
+
+    int active_count = pool_get_active_count(sim->pool);
+    if (active_count == 0) {
+        return;
     }
-    
-    /* Clean up iterator */
-    pool_iterator_destroy(&iter);
-    
-    if (active_count == 0) return;
-    
-    /* Allocate aligned buffer for SIMD processing */
-    const size_t alignment = simd_get_preferred_alignment();
-    Particle *simd_buffer = (Particle *)simd_aligned_alloc(active_count * sizeof(Particle), alignment);
+
+    Particle *simd_buffer = sim_acquire_simd_buffer(sim, active_count);
     if (!simd_buffer) {
         /* Fallback to scalar processing if allocation fails */
         sim_step_scalar(sim, dt);
         return;
     }
-    
-    /* Second pass: copy particles to aligned buffer */
-    iter = pool_iterator_create(sim->pool);
+
+    /* Copy particles to aligned buffer */
+    PoolIterator iter = pool_iterator_create(sim->pool);
+    Particle *p;
     int i = 0;
     while ((p = pool_iterator_next(&iter)) != NULL) {
-        simd_buffer[i] = *p;
-        i++;
+        simd_buffer[i++] = *p;
     }
-    
-    /* Clean up iterator */
-    pool_iterator_destroy(&iter);
-    
+
     /* Apply SIMD physics calculations */
     simd_func(simd_buffer, active_count, dt, sim->gravity, sim->windx, sim->windy);
-    
-    /* Third pass: copy back and handle collisions/cleanup */
-    iter = pool_iterator_create(sim->pool);
+
+    /* Copy back and handle collisions/cleanup */
+    pool_iterator_reset(&iter);
     i = 0;
     while ((p = pool_iterator_next(&iter)) != NULL) {
+        Particle *updated = &simd_buffer[i++];
+
         /* Copy updated physics data */
-        p->x = simd_buffer[i].x;
-        p->y = simd_buffer[i].y;
-        p->vx = simd_buffer[i].vx;
-        p->vy = simd_buffer[i].vy;
-        
+        p->x = updated->x;
+        p->y = updated->y;
+        p->vx = updated->vx;
+        p->vy = updated->vy;
+
         /* Wall collision detection and response */
         if (p->x < 0) {
             p->x = 0;
@@ -249,34 +266,31 @@ void sim_step(Simulation *sim, float dt) {
             p->x = sim->width - 1;
             p->vx = -p->vx * damping;
         }
-        
+
         if (p->y < 0) {
             p->y = 0;
             p->vy = -p->vy * damping;
         } else if (p->y >= sim->height - 1) {
             p->y = sim->height - 1;
             p->vy = -p->vy * damping;
-            
+
             /* Apply ground friction when near bottom */
             if (fabsf(p->vy) < 2.0f) {
                 p->vx *= friction;
             }
         }
-        
+
         /* Remove particles that are too slow and near bottom */
         if (p->y >= sim->height - 2 && fabsf(p->vx) < 0.5f && fabsf(p->vy) < 0.5f) {
             pool_free_particle(sim->pool, p);
             sim->count--;
         }
-        
-        i++;
     }
-    
-    /* Clean up iterator */
+
     pool_iterator_destroy(&iter);
-    
-    /* Free SIMD buffer */
-    simd_aligned_free(simd_buffer);
+
+    /* Synchronize cached count with pool */
+    sim->count = pool_get_active_count(sim->pool);
 }
 
 /* Scalar fallback implementation */
@@ -330,6 +344,9 @@ void sim_step_scalar(Simulation *sim, float dt) {
     
     /* Clean up iterator */
     pool_iterator_destroy(&iter);
+
+    /* Synchronize cached count with pool */
+    sim->count = pool_get_active_count(sim->pool);
 }
 
 /* Get particle at index (for rendering) */
@@ -412,7 +429,9 @@ Error sim_create_with_error(int capacity, int width, int height, Simulation **si
     sim->count = 0;
     sim->width = width;
     sim->height = height;
-    
+    sim->simd_buffer = NULL;
+    sim->simd_buffer_capacity = 0;
+
     /* Initialize physics parameters */
     sim->gravity = 30.0f;  /* pixels per second squared */
     sim->windx = 0.0f;
@@ -498,90 +517,75 @@ Error sim_step_with_error(Simulation *sim, float dt) {
     ERROR_CHECK(sim != NULL, ERROR_NULL_POINTER, "Simulation cannot be NULL");
     ERROR_CHECK(sim->pool != NULL, ERROR_NULL_POINTER, "Particle pool cannot be NULL");
     ERROR_CHECK(dt > 0.0f, ERROR_INVALID_PARAMETER, "Time step must be positive");
-    
+
     const float damping = 0.6f;  /* Velocity damping on wall collisions */
     const float friction = 0.98f; /* Ground friction */
-    
+
     /* Get the best available SIMD function with error handling */
     simd_step_func_t simd_func;
     Error err = simd_select_step_function_with_error(&simd_func);
     if (err.code != SUCCESS) {
         return err;
     }
-    
-    /* Collect all active particles into a contiguous array for SIMD processing */
-    PoolIterator iter;
-    err = pool_iterator_create_with_error(sim->pool, &iter);
-    if (err.code != SUCCESS) {
-        return err;
+
+    int active_count = pool_get_active_count(sim->pool);
+    if (active_count == 0) {
+        return (Error){SUCCESS};
     }
-    
+
+    Particle *simd_buffer = sim_acquire_simd_buffer(sim, active_count);
+    if (!simd_buffer) {
+        /* Fallback gracefully to scalar path if allocation fails */
+        sim_step_scalar(sim, dt);
+        return (Error){SUCCESS};
+    }
+
+    PoolIterator iter = pool_iterator_create(sim->pool);
     Particle *p;
-    int active_count = 0;
-    
-    /* First pass: count active particles */
+    int idx = 0;
     while ((p = pool_iterator_next(&iter)) != NULL) {
-        active_count++;
+        simd_buffer[idx++] = *p;
     }
-    
-    if (active_count > 0) {
-        /* Allocate temporary array for SIMD processing */
-        Particle *temp_particles = error_malloc(active_count * sizeof(Particle));
-        if (!temp_particles) {
-            pool_iterator_destroy(&iter);
-            return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate temporary particle array");
+
+    simd_func(simd_buffer, active_count, dt, sim->gravity, sim->windx, sim->windy);
+
+    pool_iterator_reset(&iter);
+    idx = 0;
+    while ((p = pool_iterator_next(&iter)) != NULL) {
+        Particle *updated = &simd_buffer[idx++];
+        p->x = updated->x;
+        p->y = updated->y;
+        p->vx = updated->vx;
+        p->vy = updated->vy;
+
+        if (p->x < 0) {
+            p->x = 0;
+            p->vx = -p->vx * damping;
+        } else if (p->x >= sim->width - 1) {
+            p->x = sim->width - 1;
+            p->vx = -p->vx * damping;
         }
-        
-        /* Second pass: copy particles to temporary array */
-        pool_iterator_reset(&iter);
-        int idx = 0;
-        while ((p = pool_iterator_next(&iter)) != NULL) {
-            temp_particles[idx++] = *p;
-        }
-        
-        /* Process particles with SIMD */
-        simd_func(temp_particles, active_count, dt, sim->gravity, sim->windx, sim->windy);
-        
-        /* Third pass: copy results back and handle collisions */
-        pool_iterator_reset(&iter);
-        idx = 0;
-        while ((p = pool_iterator_next(&iter)) != NULL) {
-            *p = temp_particles[idx++];
-            
-            /* Wall collision detection and response */
-            if (p->x < 0) {
-                p->x = 0;
-                p->vx = -p->vx * damping;
-            } else if (p->x >= sim->width - 1) {
-                p->x = sim->width - 1;
-                p->vx = -p->vx * damping;
-            }
-            
-            if (p->y < 0) {
-                p->y = 0;
-                p->vy = -p->vy * damping;
-            } else if (p->y >= sim->height - 1) {
-                p->y = sim->height - 1;
-                p->vy = -p->vy * damping;
-                
-                /* Apply ground friction when near bottom */
-                if (fabsf(p->vy) < 2.0f) {
-                    p->vx *= friction;
-                }
-            }
-            
-            /* Remove particles that are too slow and near bottom */
-            if (p->y >= sim->height - 2 && fabsf(p->vx) < 0.5f && fabsf(p->vy) < 0.5f) {
-                pool_free_particle_with_error(sim->pool, p);
-                sim->count--;
+
+        if (p->y < 0) {
+            p->y = 0;
+            p->vy = -p->vy * damping;
+        } else if (p->y >= sim->height - 1) {
+            p->y = sim->height - 1;
+            p->vy = -p->vy * damping;
+
+            if (fabsf(p->vy) < 2.0f) {
+                p->vx *= friction;
             }
         }
-        
-        error_free(temp_particles);
+
+        if (p->y >= sim->height - 2 && fabsf(p->vx) < 0.5f && fabsf(p->vy) < 0.5f) {
+            pool_free_particle_with_error(sim->pool, p);
+            sim->count--;
+        }
     }
-    
-    /* Clean up iterator */
+
     pool_iterator_destroy(&iter);
-    
+    sim->count = pool_get_active_count(sim->pool);
+
     return (Error){SUCCESS};
-} 
+}
