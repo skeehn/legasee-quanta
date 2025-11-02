@@ -8,6 +8,7 @@ pool_error_test
 improvement_test
 demo_enhanced
 csv_demo
+data_viz_demo
 
 # Object files
 *.o

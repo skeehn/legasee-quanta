@@ -114,6 +114,10 @@ demo_enhanced: clean
 csv_demo: clean
 	$(CC) $(CFLAGS) -o csv_demo examples/csv_demo.c src/csv_loader.c src/sim.c src/render.c src/term.c src/pool.c src/simd.c src/error.c src/particle.c -lm
 
+# Unified data visualization demo (CSV + JSON with plugin system)
+data_viz_demo: clean
+	$(CC) $(CFLAGS) -o data_viz_demo examples/data_viz_demo.c src/data_source.c src/csv_datasource.c src/json_datasource.c src/csv_loader.c src/sim.c src/render.c src/term.c src/pool.c src/simd.c src/error.c src/particle.c -lm
+
 help:
 	@echo "Available targets:"
 	@echo "  all          - Build the simulator (default)"
@@ -136,4 +140,5 @@ help:
 	@echo "  uninstall    - Remove from system"
 	@echo "  help         - Show this help"
 	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields"
-	@echo "  csv_demo     - Build CSV data visualization demo" 
+	@echo "  csv_demo     - Build CSV data visualization demo"
+	@echo "  data_viz_demo - Build unified data viz (CSV/JSON with plugin system)" 
