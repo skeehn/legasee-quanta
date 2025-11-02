@@ -122,6 +122,10 @@ data_viz_demo: clean
 physics_benchmark: clean
 	$(CC) $(CFLAGS) -o physics_benchmark examples/physics_benchmark.c src/sim.c src/spatial_grid.c src/physics.c src/pool.c src/simd.c src/error.c src/particle.c -lm
 
+# System monitor demo (Week 3: real-time CPU/memory/network visualization)
+sysmon_demo: clean
+	$(CC) $(CFLAGS) -o sysmon_demo examples/sysmon_demo.c src/sysmon.c src/sim.c src/spatial_grid.c src/physics.c src/pool.c src/simd.c src/error.c src/particle.c -lm
+
 help:
 	@echo "Available targets:"
 	@echo "  all          - Build the simulator (default)"
@@ -146,4 +150,5 @@ help:
 	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields"
 	@echo "  csv_demo     - Build CSV data visualization demo"
 	@echo "  data_viz_demo - Build unified data viz (CSV/JSON with plugin system)"
-	@echo "  physics_benchmark - Benchmark enhanced physics (collisions, force fields, spatial grid)" 
+	@echo "  physics_benchmark - Benchmark enhanced physics (collisions, force fields, spatial grid)"
+	@echo "  sysmon_demo    - Real-time system monitor (CPU, memory, network visualization)" 
