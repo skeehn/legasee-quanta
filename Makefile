@@ -91,7 +91,7 @@ pool_error_test: clean
 
 # Comprehensive integration test
 integration_test: clean
-	$(CC) $(CFLAGS) -o integration_test examples/integration_test.c src/error.c src/pool.c src/simd.c src/sim.c src/term.c src/render.c src/input.c src/particle.c -lm
+	$(CC) $(CFLAGS) -o integration_test examples/integration_test.c src/error.c src/pool.c src/simd.c src/sim.c src/spatial_grid.c src/physics.c src/term.c src/render.c src/input.c src/particle.c -lm
 
 # SIMD testing with x86-specific flags (for x86 platforms only)
 test-simd: $(TARGET)
@@ -109,6 +109,26 @@ uninstall:
 # Enhanced demo with new features
 demo_enhanced: clean
 	$(CC) $(CFLAGS) -o demo_enhanced src/demo_enhanced.c src/term.c -lm
+
+# CSV visualization demo
+csv_demo: clean
+	$(CC) $(CFLAGS) -o csv_demo examples/csv_demo.c src/csv_loader.c src/sim.c src/render.c src/term.c src/pool.c src/simd.c src/error.c src/particle.c -lm
+
+# Unified data visualization demo (CSV + JSON with plugin system)
+data_viz_demo: clean
+	$(CC) $(CFLAGS) -o data_viz_demo examples/data_viz_demo.c src/data_source.c src/csv_datasource.c src/json_datasource.c src/csv_loader.c src/sim.c src/render.c src/term.c src/pool.c src/simd.c src/error.c src/particle.c src/spatial_grid.c src/physics.c -lm
+
+# Enhanced physics benchmark (Week 2: collisions, force fields, spatial grid)
+physics_benchmark: clean
+	$(CC) $(CFLAGS) -o physics_benchmark examples/physics_benchmark.c src/sim.c src/spatial_grid.c src/physics.c src/pool.c src/simd.c src/error.c src/particle.c -lm
+
+# System monitor demo (Week 3: real-time CPU/memory/network visualization)
+sysmon_demo: clean
+	$(CC) $(CFLAGS) -o sysmon_demo examples/sysmon_demo.c src/sysmon.c src/sim.c src/spatial_grid.c src/physics.c src/pool.c src/simd.c src/error.c src/particle.c -lm
+
+# AI features demo (Week 4: anomaly detection, clustering, prediction, NLP)
+ai_demo: clean
+	$(CC) $(CFLAGS) -o ai_demo examples/ai_demo.c src/ai.c src/data_source.c src/csv_datasource.c src/csv_loader.c src/error.c -lm
 
 help:
 	@echo "Available targets:"
@@ -131,4 +151,9 @@ help:
 	@echo "  install      - Install to system"
 	@echo "  uninstall    - Remove from system"
 	@echo "  help         - Show this help"
-	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields" 
+	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields"
+	@echo "  csv_demo     - Build CSV data visualization demo"
+	@echo "  data_viz_demo - Build unified data viz (CSV/JSON with plugin system)"
+	@echo "  physics_benchmark - Benchmark enhanced physics (collisions, force fields, spatial grid)"
+	@echo "  sysmon_demo    - Real-time system monitor (CPU, memory, network visualization)"
+	@echo "  ai_demo        - AI features demo (anomaly detection, clustering, prediction, NLP)" 

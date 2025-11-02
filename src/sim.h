@@ -2,9 +2,12 @@
 #define SIM_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "particle.h"
 #include "pool.h"
 #include "error.h"
+#include "spatial_grid.h"
+#include "physics.h"
 
 /* Simulation structure */
 typedef struct {
@@ -15,6 +18,14 @@ typedef struct {
     uint32_t rng_state;
     Particle *simd_buffer;    /* Cached SIMD working buffer */
     int simd_buffer_capacity; /* Number of particles the buffer can hold */
+
+    /* Enhanced physics (Week 2) */
+    SpatialGrid *spatial_grid;    /* Spatial partitioning for collision detection */
+    CollisionSettings collision_settings;
+    ForceField *force_fields;     /* Array of force fields */
+    int num_force_fields;
+    int force_fields_capacity;
+    bool use_spatial_grid;        /* Enable/disable spatial grid optimization */
 } Simulation;
 
 /* Core simulation functions */
@@ -49,5 +60,19 @@ Error sim_create_with_error(int capacity, int width, int height, Simulation **si
 Error sim_add_particle_with_error(Simulation *sim, float x, float y, float vx, float vy);
 Error sim_spawn_burst_with_error(Simulation *sim, float x, float y, int count, float spread);
 Error sim_step_with_error(Simulation *sim, float dt);
+
+/* Enhanced physics functions (Week 2) */
+void sim_enable_collisions(Simulation *sim, bool enable);
+void sim_set_collision_settings(Simulation *sim, CollisionSettings settings);
+CollisionSettings sim_get_collision_settings(const Simulation *sim);
+
+int sim_add_force_field(Simulation *sim, ForceField field);
+void sim_remove_force_field(Simulation *sim, int index);
+void sim_clear_force_fields(Simulation *sim);
+ForceField* sim_get_force_field(Simulation *sim, int index);
+int sim_get_force_field_count(const Simulation *sim);
+
+void sim_enable_spatial_grid(Simulation *sim, bool enable);
+GridStats sim_get_grid_stats(const Simulation *sim);
 
 #endif /* SIM_H */ 

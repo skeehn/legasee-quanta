@@ -98,9 +98,9 @@ void renderer_flush(Renderer *renderer) {
                 uint8_t r = (color >> 16) & 0xFF;
                 uint8_t g = (color >> 8) & 0xFF;
                 uint8_t b = color & 0xFF;
-                
-                buffer_pos += snprintf(buffer + buffer_pos, 
-                                      renderer->row_buffer - buffer + buffer_pos,
+
+                buffer_pos += snprintf(buffer + buffer_pos,
+                                      renderer->row_buffer_size - buffer_pos,
                                       "\033[38;2;%d;%d;%dm", r, g, b);
                 last_color = color;
             }
@@ -169,7 +169,12 @@ Error renderer_create_with_error(int width, int height, Renderer **renderer_out)
     ERROR_CHECK(height > 0, ERROR_INVALID_PARAMETER, "Height must be positive");
     ERROR_CHECK(width <= 1000, ERROR_INVALID_PARAMETER, "Width too large (max 1000)");
     ERROR_CHECK(height <= 1000, ERROR_INVALID_PARAMETER, "Height too large (max 1000)");
-    
+
+    /* Check for potential integer overflow in buffer allocation */
+    size_t total_size = (size_t)width * (size_t)height;
+    ERROR_CHECK(total_size <= SIZE_MAX / sizeof(uint32_t), ERROR_INVALID_PARAMETER,
+               "Width × Height too large, would cause overflow");
+
     Renderer *renderer = error_malloc(sizeof(Renderer));
     if (!renderer) {
         return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate renderer structure");
@@ -191,7 +196,8 @@ Error renderer_create_with_error(int width, int height, Renderer **renderer_out)
     /* Estimate max row size: width * (color_escape + glyph) + newline */
     size_t max_row_size = width * 32 + 2; /* Conservative estimate */
     renderer->row_buffer = error_malloc(max_row_size);
-    
+    renderer->row_buffer_size = max_row_size;
+
     if (!renderer->row_buffer) {
         renderer_destroy(renderer);
         return ERROR_CREATE(ERROR_MEMORY_ALLOCATION, "Failed to allocate row buffer");
@@ -272,9 +278,9 @@ Error renderer_flush_with_error(Renderer *renderer) {
                 uint8_t r = (color >> 16) & 0xFF;
                 uint8_t g = (color >> 8) & 0xFF;
                 uint8_t b = color & 0xFF;
-                
-                buffer_pos += snprintf(buffer + buffer_pos, 
-                                      renderer->row_buffer - buffer + buffer_pos,
+
+                buffer_pos += snprintf(buffer + buffer_pos,
+                                      renderer->row_buffer_size - buffer_pos,
                                       "\033[38;2;%d;%d;%dm", r, g, b);
                 last_color = color;
             }
