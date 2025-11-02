@@ -49,14 +49,17 @@ const char* error_get_description(const Error *error) {
 /* Print error to stderr */
 void error_print(const Error *error) {
     if (!error) return;
-    
+
     time_t now = time(NULL);
     char time_str[26];
-    ctime_r(&now, time_str);
-    time_str[24] = '\0'; /* Remove newline */
-    
-    fprintf(stderr, "[%s] ERROR: %s (%s)\n", 
-            time_str, 
+    if (ctime_r(&now, time_str) == NULL) {
+        strcpy(time_str, "UNKNOWN_TIME");
+    } else {
+        time_str[24] = '\0'; /* Remove newline */
+    }
+
+    fprintf(stderr, "[%s] ERROR: %s (%s)\n",
+            time_str,
             error_code_to_string(error->code),
             error_get_description(error));
     

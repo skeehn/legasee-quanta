@@ -75,17 +75,25 @@ static void print_version(void) {
 
 static int parse_size_string(const char *size_str, int *width, int *height) {
     if (!size_str || !width || !height) return -1;
-    
-    char *x_pos = strchr(size_str, 'x');
-    if (!x_pos) return -1;
-    
+
+    /* Create a copy to avoid modifying the original string */
+    char *size_copy = strdup(size_str);
+    if (!size_copy) return -1;
+
+    char *x_pos = strchr(size_copy, 'x');
+    if (!x_pos) {
+        free(size_copy);
+        return -1;
+    }
+
     *x_pos = '\0';
-    int w = atoi(size_str);
+    int w = atoi(size_copy);
     int h = atoi(x_pos + 1);
-    *x_pos = 'x'; /* Restore original string */
-    
+
+    free(size_copy);
+
     if (w <= 0 || h <= 0 || w > 200 || h > 100) return -1;
-    
+
     *width = w;
     *height = h;
     return 0;

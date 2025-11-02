@@ -10,6 +10,7 @@ typedef struct {
     uint32_t *colors;
     int width, height;
     char *row_buffer;
+    size_t row_buffer_size;  /* Size of allocated row buffer */
 } Renderer;
 
 /* Core renderer functions */

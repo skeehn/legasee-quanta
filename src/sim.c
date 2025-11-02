@@ -81,7 +81,10 @@ Simulation *sim_create(int capacity, int width, int height) {
     
     /* Initialize PRNG with current time */
     sim->rng_state = (uint32_t)time(NULL);
-    
+    if (sim->rng_state == 0) {
+        sim->rng_state = 1;  /* xorshift32 requires non-zero seed */
+    }
+
     return sim;
 }
 
@@ -436,10 +439,13 @@ Error sim_create_with_error(int capacity, int width, int height, Simulation **si
     sim->gravity = 30.0f;  /* pixels per second squared */
     sim->windx = 0.0f;
     sim->windy = 0.0f;
-    
+
     /* Initialize PRNG with current time */
     sim->rng_state = (uint32_t)time(NULL);
-    
+    if (sim->rng_state == 0) {
+        sim->rng_state = 1;  /* xorshift32 requires non-zero seed */
+    }
+
     *sim_out = sim;
     return (Error){SUCCESS};
 }
