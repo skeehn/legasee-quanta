@@ -9,6 +9,7 @@ improvement_test
 demo_enhanced
 csv_demo
 data_viz_demo
+physics_benchmark
 
 # Object files
 *.o

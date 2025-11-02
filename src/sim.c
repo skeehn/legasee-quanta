@@ -2,6 +2,8 @@
 #include "pool.h"
 #include "simd.h"
 #include "error.h"
+#include "spatial_grid.h"
+#include "physics.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,6 +87,15 @@ Simulation *sim_create(int capacity, int width, int height) {
         sim->rng_state = 1;  /* xorshift32 requires non-zero seed */
     }
 
+    /* Initialize enhanced physics (Week 2) */
+    sim->spatial_grid = spatial_grid_create(width, height, 10.0f);  /* 10-pixel cells */
+    sim->collision_settings = physics_default_collision_settings();
+    sim->collision_settings.enabled = false;  /* Disabled by default */
+    sim->force_fields = NULL;
+    sim->num_force_fields = 0;
+    sim->force_fields_capacity = 0;
+    sim->use_spatial_grid = false;  /* Disabled by default for backward compatibility */
+
     return sim;
 }
 
@@ -93,6 +104,12 @@ void sim_destroy(Simulation *sim) {
     if (sim) {
         if (sim->simd_buffer) {
             simd_aligned_free(sim->simd_buffer);
+        }
+        if (sim->spatial_grid) {
+            spatial_grid_destroy(sim->spatial_grid);
+        }
+        if (sim->force_fields) {
+            free(sim->force_fields);
         }
         pool_destroy(sim->pool);
         free(sim);
@@ -249,6 +266,20 @@ void sim_step(Simulation *sim, float dt) {
     /* Apply SIMD physics calculations */
     simd_func(simd_buffer, active_count, dt, sim->gravity, sim->windx, sim->windy);
 
+    /* Apply force fields if any */
+    if (sim->num_force_fields > 0 && sim->force_fields) {
+        /* Create particle pointer array for force field application */
+        Particle **particle_ptrs = (Particle**)malloc(sizeof(Particle*) * active_count);
+        if (particle_ptrs) {
+            for (int idx = 0; idx < active_count; idx++) {
+                particle_ptrs[idx] = &simd_buffer[idx];
+            }
+            physics_apply_force_fields(particle_ptrs, active_count,
+                                      sim->force_fields, sim->num_force_fields, dt);
+            free(particle_ptrs);
+        }
+    }
+
     /* Copy back and handle collisions/cleanup */
     pool_iterator_reset(&iter);
     i = 0;
@@ -291,6 +322,31 @@ void sim_step(Simulation *sim, float dt) {
     }
 
     pool_iterator_destroy(&iter);
+
+    /* Handle particle-particle collisions if enabled */
+    if (sim->use_spatial_grid && sim->collision_settings.enabled && sim->spatial_grid) {
+        /* Build spatial grid */
+        spatial_grid_clear(sim->spatial_grid);
+
+        /* Create particle pointer array for spatial grid */
+        Particle **particle_ptrs = (Particle**)malloc(sizeof(Particle*) * active_count);
+        if (particle_ptrs) {
+            iter = pool_iterator_create(sim->pool);
+            i = 0;
+            while ((p = pool_iterator_next(&iter)) != NULL) {
+                particle_ptrs[i] = p;
+                spatial_grid_insert(sim->spatial_grid, p);
+                i++;
+            }
+            pool_iterator_destroy(&iter);
+
+            /* Resolve collisions using spatial grid */
+            physics_resolve_collisions(sim->spatial_grid, particle_ptrs,
+                                      active_count, &sim->collision_settings);
+
+            free(particle_ptrs);
+        }
+    }
 
     /* Synchronize cached count with pool */
     sim->count = pool_get_active_count(sim->pool);
@@ -446,6 +502,15 @@ Error sim_create_with_error(int capacity, int width, int height, Simulation **si
         sim->rng_state = 1;  /* xorshift32 requires non-zero seed */
     }
 
+    /* Initialize enhanced physics (Week 2) */
+    sim->spatial_grid = spatial_grid_create(width, height, 10.0f);  /* 10-pixel cells */
+    sim->collision_settings = physics_default_collision_settings();
+    sim->collision_settings.enabled = false;  /* Disabled by default */
+    sim->force_fields = NULL;
+    sim->num_force_fields = 0;
+    sim->force_fields_capacity = 0;
+    sim->use_spatial_grid = false;  /* Disabled by default for backward compatibility */
+
     *sim_out = sim;
     return (Error){SUCCESS};
 }
@@ -594,4 +659,95 @@ Error sim_step_with_error(Simulation *sim, float dt) {
     sim->count = pool_get_active_count(sim->pool);
 
     return (Error){SUCCESS};
+}
+
+/* ===== ENHANCED PHYSICS FUNCTIONS (Week 2) ===== */
+
+/* Enable/disable collisions */
+void sim_enable_collisions(Simulation *sim, bool enable) {
+    if (sim) {
+        sim->collision_settings.enabled = enable;
+        sim->use_spatial_grid = enable;  /* Auto-enable spatial grid for collisions */
+    }
+}
+
+/* Set collision settings */
+void sim_set_collision_settings(Simulation *sim, CollisionSettings settings) {
+    if (sim) {
+        sim->collision_settings = settings;
+    }
+}
+
+/* Get collision settings */
+CollisionSettings sim_get_collision_settings(const Simulation *sim) {
+    if (sim) {
+        return sim->collision_settings;
+    }
+    return physics_default_collision_settings();
+}
+
+/* Add force field */
+int sim_add_force_field(Simulation *sim, ForceField field) {
+    if (!sim) return -1;
+
+    /* Expand capacity if needed */
+    if (sim->num_force_fields >= sim->force_fields_capacity) {
+        int new_capacity = (sim->force_fields_capacity == 0) ? 4 : sim->force_fields_capacity * 2;
+        ForceField *new_fields = (ForceField*)realloc(sim->force_fields,
+                                                       sizeof(ForceField) * new_capacity);
+        if (!new_fields) return -1;
+
+        sim->force_fields = new_fields;
+        sim->force_fields_capacity = new_capacity;
+    }
+
+    /* Add field */
+    sim->force_fields[sim->num_force_fields] = field;
+    return sim->num_force_fields++;
+}
+
+/* Remove force field by index */
+void sim_remove_force_field(Simulation *sim, int index) {
+    if (!sim || index < 0 || index >= sim->num_force_fields) return;
+
+    /* Shift remaining fields down */
+    for (int i = index; i < sim->num_force_fields - 1; i++) {
+        sim->force_fields[i] = sim->force_fields[i + 1];
+    }
+
+    sim->num_force_fields--;
+}
+
+/* Clear all force fields */
+void sim_clear_force_fields(Simulation *sim) {
+    if (sim) {
+        sim->num_force_fields = 0;
+    }
+}
+
+/* Get force field by index */
+ForceField* sim_get_force_field(Simulation *sim, int index) {
+    if (!sim || index < 0 || index >= sim->num_force_fields) return NULL;
+    return &sim->force_fields[index];
+}
+
+/* Get force field count */
+int sim_get_force_field_count(const Simulation *sim) {
+    return sim ? sim->num_force_fields : 0;
+}
+
+/* Enable/disable spatial grid */
+void sim_enable_spatial_grid(Simulation *sim, bool enable) {
+    if (sim) {
+        sim->use_spatial_grid = enable;
+    }
+}
+
+/* Get grid statistics */
+GridStats sim_get_grid_stats(const Simulation *sim) {
+    GridStats stats = {0};
+    if (sim && sim->spatial_grid) {
+        spatial_grid_get_stats(sim->spatial_grid, &stats);
+    }
+    return stats;
 }

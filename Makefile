@@ -116,7 +116,11 @@ csv_demo: clean
 
 # Unified data visualization demo (CSV + JSON with plugin system)
 data_viz_demo: clean
-	$(CC) $(CFLAGS) -o data_viz_demo examples/data_viz_demo.c src/data_source.c src/csv_datasource.c src/json_datasource.c src/csv_loader.c src/sim.c src/render.c src/term.c src/pool.c src/simd.c src/error.c src/particle.c -lm
+	$(CC) $(CFLAGS) -o data_viz_demo examples/data_viz_demo.c src/data_source.c src/csv_datasource.c src/json_datasource.c src/csv_loader.c src/sim.c src/render.c src/term.c src/pool.c src/simd.c src/error.c src/particle.c src/spatial_grid.c src/physics.c -lm
+
+# Enhanced physics benchmark (Week 2: collisions, force fields, spatial grid)
+physics_benchmark: clean
+	$(CC) $(CFLAGS) -o physics_benchmark examples/physics_benchmark.c src/sim.c src/spatial_grid.c src/physics.c src/pool.c src/simd.c src/error.c src/particle.c -lm
 
 help:
 	@echo "Available targets:"
@@ -141,4 +145,5 @@ help:
 	@echo "  help         - Show this help"
 	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields"
 	@echo "  csv_demo     - Build CSV data visualization demo"
-	@echo "  data_viz_demo - Build unified data viz (CSV/JSON with plugin system)" 
+	@echo "  data_viz_demo - Build unified data viz (CSV/JSON with plugin system)"
+	@echo "  physics_benchmark - Benchmark enhanced physics (collisions, force fields, spatial grid)" 
