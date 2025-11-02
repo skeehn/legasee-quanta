@@ -7,6 +7,7 @@ pool_test_simple
 pool_error_test
 improvement_test
 demo_enhanced
+csv_demo
 
 # Object files
 *.o
