@@ -126,6 +126,10 @@ physics_benchmark: clean
 sysmon_demo: clean
 	$(CC) $(CFLAGS) -o sysmon_demo examples/sysmon_demo.c src/sysmon.c src/sim.c src/spatial_grid.c src/physics.c src/pool.c src/simd.c src/error.c src/particle.c -lm
 
+# AI features demo (Week 4: anomaly detection, clustering, prediction, NLP)
+ai_demo: clean
+	$(CC) $(CFLAGS) -o ai_demo examples/ai_demo.c src/ai.c src/data_source.c src/csv_datasource.c src/csv_loader.c src/error.c -lm
+
 help:
 	@echo "Available targets:"
 	@echo "  all          - Build the simulator (default)"
@@ -151,4 +155,5 @@ help:
 	@echo "  csv_demo     - Build CSV data visualization demo"
 	@echo "  data_viz_demo - Build unified data viz (CSV/JSON with plugin system)"
 	@echo "  physics_benchmark - Benchmark enhanced physics (collisions, force fields, spatial grid)"
-	@echo "  sysmon_demo    - Real-time system monitor (CPU, memory, network visualization)" 
+	@echo "  sysmon_demo    - Real-time system monitor (CPU, memory, network visualization)"
+	@echo "  ai_demo        - AI features demo (anomaly detection, clustering, prediction, NLP)" 
