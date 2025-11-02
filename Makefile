@@ -91,7 +91,7 @@ pool_error_test: clean
 
 # Comprehensive integration test
 integration_test: clean
-	$(CC) $(CFLAGS) -o integration_test examples/integration_test.c src/error.c src/pool.c src/simd.c src/sim.c src/term.c src/render.c src/input.c src/particle.c -lm
+	$(CC) $(CFLAGS) -o integration_test examples/integration_test.c src/error.c src/pool.c src/simd.c src/sim.c src/spatial_grid.c src/physics.c src/term.c src/render.c src/input.c src/particle.c -lm
 
 # SIMD testing with x86-specific flags (for x86 platforms only)
 test-simd: $(TARGET)
