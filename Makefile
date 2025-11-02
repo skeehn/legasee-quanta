@@ -110,6 +110,10 @@ uninstall:
 demo_enhanced: clean
 	$(CC) $(CFLAGS) -o demo_enhanced src/demo_enhanced.c src/term.c -lm
 
+# CSV visualization demo
+csv_demo: clean
+	$(CC) $(CFLAGS) -o csv_demo examples/csv_demo.c src/csv_loader.c src/sim.c src/render.c src/term.c src/pool.c src/simd.c src/error.c src/particle.c -lm
+
 help:
 	@echo "Available targets:"
 	@echo "  all          - Build the simulator (default)"
@@ -131,4 +135,5 @@ help:
 	@echo "  install      - Install to system"
 	@echo "  uninstall    - Remove from system"
 	@echo "  help         - Show this help"
-	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields" 
+	@echo "  demo_enhanced - Build enhanced demo with Unicode, mouse, trails, force fields"
+	@echo "  csv_demo     - Build CSV data visualization demo" 
